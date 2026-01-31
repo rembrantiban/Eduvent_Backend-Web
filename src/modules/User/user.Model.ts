@@ -15,6 +15,10 @@ export interface IUser extends Document {
   section?: string;
   createdAt: Date;
   updatedAt: Date;
+  resetPasswordCode?: string;
+  resetPasswordExpires?: Date;
+  resetPasswordVerified?: boolean;
+
 }
 
 const UserSchema: Schema = new Schema<IUser>(
@@ -24,6 +28,11 @@ const UserSchema: Schema = new Schema<IUser>(
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     role: { type: String, enum: ["admin", "teacher", "student"], default: "student" },
+
+    // reset password fields
+    resetPasswordCode: { type: String },
+    resetPasswordExpires: { type: Date },
+    resetPasswordVerified: { type: Boolean, default: false },
 
      // unique only if exists
     studentId: { type: String, unique: true, sparse: true },

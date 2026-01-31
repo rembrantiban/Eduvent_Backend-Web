@@ -3,6 +3,9 @@ import { User, IUser } from "./user.Model";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import validator from "validator";
+import crypto from "crypto";
+import { resend } from "../../common/lib/resend";
+
 
 const SALT_ROUNDS = 12;
 
@@ -210,4 +213,97 @@ export const completeProfile = async (req: Request, res: Response) => {
       console.error(err);
       return res.status(500).json({ message: "Internal server error" });
     }
-}
+} 
+
+export const requestResetCode = async (req: Request, res: Response) => {
+  try {
+    const { email } = req.body;
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // 6-digit code
+    const code = crypto.randomInt(100000, 999999).toString();
+
+    user.resetPasswordCode = crypto
+      .createHash("sha256")
+      .update(code)
+      .digest("hex");
+
+    user.resetPasswordExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
+    user.resetPasswordVerified = false;
+
+    await user.save();
+
+    await resend.emails.send({
+      from: "no-reply@yourdomain.com",
+      to: email,
+      subject: "Password Reset Code",
+      text: `Your password reset code is: ${code}\nExpires in 10 minutes.`,
+    });
+
+    res.json({ message: "Reset code sent to email" });
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+
+export const verifyResetCode = async (req: Request, res: Response) => {
+  try {
+    const { email, code } = req.body;
+
+    const hashedCode = crypto
+      .createHash("sha256")
+      .update(code)
+      .digest("hex");
+
+    const user = await User.findOne({
+      email,
+      resetPasswordCode: hashedCode,
+      resetPasswordExpires: { $gt: new Date() },
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: "Invalid or expired code" });
+    }
+
+    user.resetPasswordVerified = true;
+    await user.save();
+
+    res.json({ message: "Code verified successfully" });
+  } catch {
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+export const resetPassword = async (req: Request, res: Response) => {
+  try {
+    const { email, newPassword } = req.body;
+
+    const user = await User.findOne({
+      email,
+      resetPasswordVerified: true,
+      resetPasswordExpires: { $gt: new Date() },
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: "Reset not verified" });
+    }
+
+    user.password = await bcrypt.hash(newPassword, 12);
+
+    // Cleanup
+    user.resetPasswordCode = undefined;
+    user.resetPasswordExpires = undefined;
+    user.resetPasswordVerified = undefined;
+
+    await user.save();
+
+    res.json({ message: "Password reset successful" });
+  } catch {
+    res.status(500).json({ message: "Server error" });
+  }
+};
