@@ -1,12 +1,12 @@
 import { Request, Response } from "express";
-import { Event, IEvent } from "./event.Model";
+import { Event, EventStatus, IEvent } from "./event.Model";
 import  cloudinary   from "../../config/cloudinary";  
 import { calculateEventStatus } from "../../common/utils/eventStatus";
 
 
 export const createEvent = async (req: Request, res: Response) => {
   try {
-    const { title, description, date, time, location, status } = req.body;
+    const { title, description, date, time, location } = req.body;
 
     if (!title || !description || !date || !time || !location) {
       return res.status(400).json({
@@ -34,6 +34,8 @@ export const createEvent = async (req: Request, res: Response) => {
 
       imageUrl = uploadResult.secure_url;
     }
+    
+     const status = calculateEventStatus(new Date(date), time, EventStatus.UPCOMING);
 
     const newEvent: IEvent = new Event({
       imageUrl,
@@ -95,37 +97,157 @@ export const getEvents = async (req: Request, res: Response) => {
 
 
 export const updateEvent = async (req: Request, res: Response) => {
-    try{
-        const eventId = req.params.id;
-        const updatedData = req.body;
+  try {
+    const eventId = req.params.id;
 
-        const updateEvent = await Event.findByIdAndUpdate(eventId, updatedData, { new: true });
-        if(!updateEvent){
-            return res.status(404).json({ message: "Event not found" });
-        }
+    const { title, description, date, time, location } = req.body;
 
-        return res.status(200).json({ success: true, data: updateEvent });
+    const event = await Event.findById(eventId);
+    if (!event) {
+      return res.status(404).json({ message: "Event not found" });
     }
-    catch(err){
-        return res.status(500).json({ success: false, message: "Internal Server Error"});
+
+    if (req.file) {
+      const uploadResult = await new Promise<any>((resolve, reject) => {
+        cloudinary.uploader
+          .upload_stream(
+            {
+              folder: "events",
+              resource_type: "image",
+            },
+            (error, result) => {
+              if (error) reject(error);
+              else resolve(result);
+            }
+          )
+          .end(req.file!.buffer);
+      });
+
+      event.imageUrl = uploadResult.secure_url;
     }
-}
 
- export const deleteEvent = async(req: Request, res: Response) => {
-     try{
-          const eventId = req.params.id;
-          const deletedEvent = await Event.findByIdAndDelete(eventId);
+    if (title) event.title = title;
+    if (description) event.description = description;
+    if (date) event.date = new Date(date);
+    if (time) event.time = time;
+    if (location) event.location = location;
 
-          if(!deletedEvent){
-             return res.status(404).json({ message: "Event not found" });
-          }
+    event.status = calculateEventStatus(
+      event.date,
+      event.time,
+      event.status
+    );
 
-            return res.status(200).json({ success: true, message: "Event deleted successfully" });
+    const updatedEvent = await event.save();
 
-     }
-     catch(err){
-        res.status(500).json({ success: false, message: "Internal Server Error"});
-        console.error(err, "Error in deleteEvent");
+    return res.status(200).json({
+      success: true,
+      data: updatedEvent,
+    });
+  } catch (err) {
+    console.error("Error in updateEvent", err);
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
+  }
+};
 
-     }
- }
+
+ // delete Controller Component
+
+const getPublicIdFromUrl = (url: string): string | null => {
+  try {
+    const parts = url.split("/");
+    const uploadIndex = parts.findIndex((p) => p === "upload");
+    if (uploadIndex === -1) return null;
+
+    // Skip "upload" and version (v123456)
+    const publicIdWithExt = parts
+      .slice(uploadIndex + 2)
+      .join("/")
+      .split(".")[0];
+
+    return publicIdWithExt;
+  } catch {
+    return null;
+  }
+};
+
+
+ export const deleteEvent = async (req: Request, res: Response) => {
+  try {
+    const eventId = req.params.id;
+
+    const event = await Event.findById(eventId);
+    if (!event) {
+      return res.status(404).json({ message: "Event not found" });
+    }
+
+    if (event.imageUrl) {
+      const publicId = getPublicIdFromUrl(event.imageUrl);
+
+      if (publicId) {
+        await cloudinary.uploader.destroy(publicId, {
+          resource_type: "image",
+        });
+      }
+    }
+
+    await event.deleteOne();
+
+    return res.status(200).json({
+      success: true,
+      message: "Event and image deleted successfully",
+    });
+  } catch (err) {
+    console.error("Error in deleteEvent", err);
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
+  }
+};
+
+
+export const updateEventStatusToCanceled = async (req: Request, res: Response) => {
+  try {
+    const eventId = req.params.id;
+    const event = await Event.findById(eventId);
+
+    if (!event) {
+      return res.status(404).json({ message: "Event not found" });
+    }
+
+    event.status =  EventStatus.CANCELLED; // ✅ matches enum
+    await event.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Event status updated to Cancelled",
+    });
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
+  }
+};
+
+export const getUpComingEvents = async (req: Request, res: Response) => {
+  try {
+    const upComingEvents = await Event.find({
+      status: EventStatus.UPCOMING  , 
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: upComingEvents,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
+  }
+};

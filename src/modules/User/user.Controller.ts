@@ -100,6 +100,66 @@ export const signupUser = async (req: Request, res: Response) => {
   }
 };
 
+
+export const loginAdmin = async (req: Request, res: Response) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ message: "Please provide email and password." });
+    }
+
+
+    const user = await User.findOne({
+      email: email,
+      role: { $in: ["admin", "teacher"] },
+    }).select("+password"); 
+
+    if (!user) {
+      return res.status(401).json({ message: "Invalid credentials." });
+    }
+
+    const isValidPassword = await bcrypt.compare(password, user.password);
+
+    if (!isValidPassword) {
+      return res.status(401).json({ message: "Invalid credentials." });
+    }
+
+    const token = jwt.sign(
+      {
+        id: user._id,
+        role: user.role,
+        email: user.email,
+      },
+      process.env.JWT_SECRET || "defaultsecret",
+      { expiresIn: "7d" }
+    );
+
+    // ✅ SET COOKIE
+    res.cookie("user_token", token, {
+      httpOnly: true,
+      secure: false,        // true in production (HTTPS)
+      sameSite: "lax",      // use "none" + secure:true if cross-site HTTPS
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+
+    return res.status(200).json({
+      message: "Login successful.",
+      user: {
+        id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        role: user.role,
+      },
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+
 export const loginUser = async (req: Request, res: Response) => {
   try {
     const { identifier, password } = req.body;
@@ -175,6 +235,7 @@ export const loginUser = async (req: Request, res: Response) => {
     });
   }
 };
+
 
 export const completeProfile = async (req: Request, res: Response) => {
     try{
@@ -305,5 +366,51 @@ export const resetPassword = async (req: Request, res: Response) => {
     res.json({ message: "Password reset successful" });
   } catch {
     res.status(500).json({ message: "Server error" });
+  }
+};
+
+
+export const logoutUser = async (req: Request, res: Response) => {
+  try {
+    res.clearCookie("user_token", {
+      httpOnly: true,
+      secure: false,        // true in production (HTTPS)
+      sameSite: "lax",      // use "none" + secure:true if cross-site HTTPS
+    });
+    return res.status(200).json({ message: "Logout successful." });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+}
+
+export const checkUserAuth = async (req: Request, res: Response) => {
+  try {
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+
+    const userId = req.user._id;
+    const user = await User.findById(userId).select("-password");
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    return res.status(200).json({
+      user: {
+        id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        role: user.role,
+        studentId: user.studentId,
+        yearLevel: user.yearLevel,
+        department: user.department,
+      },
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: "Internal server error" });
   }
 };

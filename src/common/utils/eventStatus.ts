@@ -3,29 +3,30 @@ import { EventStatus } from "../../modules/Event/event.Model";
 export const calculateEventStatus = (
   date: Date,
   time: string,
-  currentStatus?: EventStatus
+  currentStatus: EventStatus
 ): EventStatus => {
-  // Do NOT override cancelled events
+
+  // ❌ Never auto-change cancelled events
   if (currentStatus === EventStatus.CANCELLED) {
     return EventStatus.CANCELLED;
   }
 
   const now = new Date();
 
-  // Combine date + time
+  // Build event start datetime
   const [hours, minutes] = time.split(":").map(Number);
-  const eventDateTime = new Date(date);
-  eventDateTime.setHours(hours, minutes, 0, 0);
+  const eventStart = new Date(date);
+  eventStart.setHours(hours, minutes, 0, 0);
 
-  if (now < eventDateTime) {
+  // Assume duration = 2 hours (change if needed)
+  const eventEnd = new Date(eventStart);
+  eventEnd.setHours(eventEnd.getHours() + 2);
+
+  if (now < eventStart) {
     return EventStatus.UPCOMING;
   }
 
-  // Assume event duration is 2 hours (adjust if needed)
-  const eventEndTime = new Date(eventDateTime);
-  eventEndTime.setHours(eventEndTime.getHours() + 2);
-
-  if (now >= eventDateTime && now <= eventEndTime) {
+  if (now >= eventStart && now <= eventEnd) {
     return EventStatus.ONGOING;
   }
 
