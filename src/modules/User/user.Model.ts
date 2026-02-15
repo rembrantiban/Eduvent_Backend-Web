@@ -27,7 +27,7 @@ const UserSchema: Schema = new Schema<IUser>(
     lastName: { type: String, required: true },
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
-    role: { type: String, enum: ["admin", "teacher", "student"], default: "student" },
+    role: { type: String, enum: ["admin", "teacher","event_organizer", "student"], default: "student" },
 
     // reset password fields
     resetPasswordCode: { type: String },
