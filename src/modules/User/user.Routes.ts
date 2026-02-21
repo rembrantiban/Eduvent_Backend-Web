@@ -10,6 +10,10 @@ import {
          loginAdmin,
          logoutUser,
          checkUserAuth,
+         getUsersSameDepartment,
+         createUserByTeacher,
+         getAllUsers,
+         createUserByAdmin,
         } from "./user.Controller";
 
 
@@ -25,5 +29,9 @@ router.post("/complete-profile", AuthCookieMiddleware, completeProfile);
 router.post("/request-password-reset", requestResetCode);
 router.post("/verify-password-reset", verifyResetCode);
 router.post("/confirm-password-reset", resetPassword);
+router.post("/create-user-by-teacher", AuthCookieMiddleware, createUserByTeacher);
+router.post("/create-user-by-admin", AuthCookieMiddleware, createUserByAdmin);
+router.get("/get-all-users", getAllUsers);
+router.get("/get-users-same-department", AuthCookieMiddleware, getUsersSameDepartment);
 
 export default router;

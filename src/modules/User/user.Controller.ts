@@ -6,7 +6,6 @@ import validator from "validator";
 import crypto from "crypto";
 import { resend } from "../../common/lib/resend";
 
-
 const SALT_ROUNDS = 12;
 
 export const signupUser = async (req: Request, res: Response) => {
@@ -23,12 +22,12 @@ export const signupUser = async (req: Request, res: Response) => {
 
 
     if (!validator.isStrongPassword(password, {
-      minLength: 6, 
-      minNumbers: 1, 
-      minLowercase: 1, 
-      minUppercase: 0, 
-      minSymbols: 0 
-     })) {
+      minLength: 6,
+      minNumbers: 1,
+      minLowercase: 1,
+      minUppercase: 0,
+      minSymbols: 0
+    })) {
       return res.status(400).json({ message: "Password must be at least 6 characters and contain at least 1 number and 1 letter." });
     }
 
@@ -92,11 +91,220 @@ export const signupUser = async (req: Request, res: Response) => {
         department: createdUser.department,
         section: createdUser.section,
       },
-      token, 
+      token,
     });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export const createUserByTeacher = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    if (!req.user || req.user.role !== "teacher") {
+      return res.status(403).json({
+        message: "Only teachers can create users.",
+      });
+    }
+
+
+    const {
+      firstName,
+      lastName,
+      email,
+      password,
+      role,
+      studentId,
+      yearLevel,
+      section,
+    } = req.body;
+
+    if (!["student", "event_organizer"].includes(role)) {
+      return res.status(403).json({
+        message: "Teachers can only create students or event organizers.",
+      });
+    }
+
+    if (!firstName || !lastName || !email || !role || !password) {
+      return res.status(400).json({
+        message: "Missing required fields.",
+      });
+    }
+
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({
+        message: "Email already exists.",
+      });
+    }
+
+    if (role === "student" && studentId) {
+      const existingStudent = await User.findOne({ studentId });
+      if (existingStudent) {
+        return res.status(400).json({
+          message: "Student ID already exists.",
+        });
+      }
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        message: "Invalid email format.",
+      });
+    }
+
+
+    if (!req.user || req.user.role !== "teacher") {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
+    const department = req.user.department;
+
+    // Default password
+    const hashedPassword = await bcrypt.hash(password, 12);
+
+    const newUser = await User.create({
+      firstName,
+      lastName,
+      email,
+      password: hashedPassword,
+      role,
+      department, // 🔥 automatically same as teacher
+      ...(role === "student" && {
+        studentId,
+        yearLevel,
+        section,
+      }),
+    });
+
+    return res.status(201).json({
+      message: "User created successfully.",
+      user: {
+        id: newUser._id,
+        firstName: newUser.firstName,
+        lastName: newUser.lastName,
+        email: newUser.email,
+        role: newUser.role,
+        department: newUser.department,
+      },
+    });
+
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({
+      message: "Server error",
+    });
+  }
+};
+
+export const createUserByAdmin = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    //  Only admin allowed
+    if (!req.user || req.user.role !== "admin") {
+      return res.status(403).json({
+        message: "Only admins can create users.",
+      });
+    }
+
+    const {
+      firstName,
+      lastName,
+      email,
+      password,
+      role,
+      department,
+      studentId,
+      yearLevel,
+      section,
+    } = req.body;
+
+    // ✅ Allowed roles
+    if (!["teacher", "student", "event_organizer"].includes(role)) {
+      return res.status(403).json({
+        message: "Invalid role. Admin can only create teacher, student, or event organizer.",
+      });
+    }
+
+    // ✅ Required fields
+    if (!firstName || !lastName || !email || !password || !role || !department) {
+      return res.status(400).json({
+        message: "Missing required fields.",
+      });
+    }
+
+    // ✅ Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        message: "Invalid email format.",
+      });
+    }
+
+    //  Check email uniqueness
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({
+        message: "Email already exists.",
+      });
+    }
+
+    // Student-specific validation
+    if (role === "student") {
+      if (!studentId || !yearLevel || !section) {
+        return res.status(400).json({
+          message: "Missing student information.",
+        });
+      }
+
+      const existingStudent = await User.findOne({ studentId });
+      if (existingStudent) {
+        return res.status(400).json({
+          message: "Student ID already exists.",
+        });
+      }
+    }
+
+    //  Hash password
+    const hashedPassword = await bcrypt.hash(password, 12);
+
+    const newUser = await User.create({
+      firstName,
+      lastName,
+      email,
+      password: hashedPassword,
+      role,
+      department,
+      ...(role === "student" && {
+        studentId,
+        yearLevel,
+        section,
+      }),
+    });
+
+    return res.status(201).json({
+      message: "User created successfully.",
+      user: {
+        id: newUser._id,
+        firstName: newUser.firstName,
+        lastName: newUser.lastName,
+        email: newUser.email,
+        role: newUser.role,
+        department: newUser.department,
+      },
+    });
+
+  } catch (err) {
+    console.error("Create user by admin error:", err);
+    return res.status(500).json({
+      message: "Server error",
+    });
   }
 };
 
@@ -113,7 +321,7 @@ export const loginAdmin = async (req: Request, res: Response) => {
     const user = await User.findOne({
       email: email,
       role: { $in: ["admin", "teacher"] },
-    }).select("+password"); 
+    }).select("+password");
 
     if (!user) {
       return res.status(401).json({ message: "Invalid credentials." });
@@ -171,7 +379,7 @@ export const loginUser = async (req: Request, res: Response) => {
     }
     const normalizedIdentifier = identifier.trim().toLowerCase();
 
-   const user = await User.findOne({
+    const user = await User.findOne({
       $or: [
         { email: normalizedIdentifier },
         { studentId: normalizedIdentifier },
@@ -193,8 +401,8 @@ export const loginUser = async (req: Request, res: Response) => {
     }
 
     const isProfileComplete =
-    user.role !== "student" ||
-    (user.yearLevel && user.department && user.section);
+      user.role !== "student" ||
+      (user.yearLevel && user.department && user.section);
 
 
     const token = jwt.sign(
@@ -238,43 +446,43 @@ export const loginUser = async (req: Request, res: Response) => {
 
 
 export const completeProfile = async (req: Request, res: Response) => {
-    try{
-         const { yearLevel, department, section } = req.body;
-         const userId = req.user._id;
+  try {
+    const { yearLevel, department, section } = req.body;
+    const userId = req.user._id;
 
-         if (!yearLevel || !department || !section) {
-           return res.status(400).json({ message: "Please provide all required fields." });
-         }
-          const updatedUser = await User.findByIdAndUpdate(
-            userId,
-            { yearLevel, department, section },
-            { new: true }
-          );
+    if (!yearLevel || !department || !section) {
+      return res.status(400).json({ message: "Please provide all required fields." });
+    }
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { yearLevel, department, section },
+      { new: true }
+    );
 
-          if (!updatedUser) {
-            return res.status(404).json({ message: "User not found." });
-          }
+    if (!updatedUser) {
+      return res.status(404).json({ message: "User not found." });
+    }
 
-          return res.status(200).json({
-            messege:"Profile completed successfully.",
-            user: {
-              id: updatedUser._id,
-              firstName: updatedUser.firstName,
-              lastName: updatedUser.lastName,
-              email: updatedUser.email,
-              role: updatedUser.role,
-              studentId: updatedUser.studentId,
-              yearLevel: updatedUser.yearLevel,
-              department: updatedUser.department,
-              section: updatedUser.section, 
-    }
-          });
-    }
-    catch(err){
-      console.error(err);
-      return res.status(500).json({ message: "Internal server error" });
-    }
-} 
+    return res.status(200).json({
+      messege: "Profile completed successfully.",
+      user: {
+        id: updatedUser._id,
+        firstName: updatedUser.firstName,
+        lastName: updatedUser.lastName,
+        email: updatedUser.email,
+        role: updatedUser.role,
+        studentId: updatedUser.studentId,
+        yearLevel: updatedUser.yearLevel,
+        department: updatedUser.department,
+        section: updatedUser.section,
+      }
+    });
+  }
+  catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+}
 
 export const requestResetCode = async (req: Request, res: Response) => {
   try {
@@ -412,5 +620,93 @@ export const checkUserAuth = async (req: Request, res: Response) => {
   } catch (err) {
     console.error(err);
     return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+
+export const getUsersSameDepartment = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    if (!req.user.department) {
+      return res
+        .status(400)
+        .json({ message: "User has no department assigned" });
+    }
+
+    const users = await User.find({
+      department: req.user.department,
+      role: { $ne: "teacher" },
+    }).select("-password");
+
+    return res.json(
+      users.map((user) => ({
+        id: user._id.toString(),
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        role: user.role,
+        section: user.section,
+        department: user.department,
+        studentId: user.studentId,
+        yearLevel: user.yearLevel,
+
+        dateAdded: user.createdAt
+          ? new Date(user.createdAt).toLocaleDateString()
+          : "NA",
+
+        lastActive: user.updatedAt
+          ? new Date(user.updatedAt).toLocaleDateString()
+          : "NA",
+      }))
+    );
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+
+export const getAllUsers = async (req: Request, res: Response) => {
+  try {
+    const users = await User.find({ role: { $ne: "admin" } }).select("-password");
+
+    return res.json(
+      users.map((user) => ({
+        id: user._id.toString(),
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        role: user.role,
+        section: user.section,
+        department: user.department,
+        studentId: user.studentId,
+        yearLevel: user.yearLevel,
+
+        dateAdded: user.createdAt
+          ? new Intl.DateTimeFormat("en-US", {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          }).format(new Date(user.createdAt))
+          : "NA",
+
+        lastActive: user.updatedAt
+          ? new Intl.DateTimeFormat("en-US", {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          }).format(new Date(user.updatedAt))
+          : "NA",
+      }))
+    );
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Server error" });
   }
 };

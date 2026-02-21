@@ -215,6 +215,14 @@ export const updateEventStatusToCanceled = async (req: Request, res: Response) =
     const eventId = req.params.id;
     const event = await Event.findById(eventId);
 
+    if(event?.status === EventStatus.FINISHED) {
+      return res.status(400).json({ message: "Cannot cancel a finished event" });
+    }
+
+    if(event?.status === EventStatus.CANCELLED) {
+      return res.status(400).json({ message: "Event is already cancelled" });
+    }
+
     if (!event) {
       return res.status(404).json({ message: "Event not found" });
     }
