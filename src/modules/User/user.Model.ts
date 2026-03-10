@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document } from "mongoose";
 
-export type UserRole = "admin" | "teacher" | "student";
+export type UserRole = "admin" | "teacher" | "student" | "CSSG_officer" | "Saso";
 
 export interface IUser extends Document {
   firstName: string;
@@ -8,6 +8,8 @@ export interface IUser extends Document {
   email: string;
   password: string;
   role: UserRole;
+  isActive: boolean;
+  
   // Student-specific fields
   studentId?: string;
   yearLevel?: string;
@@ -27,8 +29,8 @@ const UserSchema: Schema = new Schema<IUser>(
     lastName: { type: String, required: true },
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
-    role: { type: String, enum: ["admin", "teacher","event_organizer", "student"], default: "student" },
-
+    role: { type: String, enum: ["admin", "teacher","CSSG_officer", "Saso", "student"], default: "student" },
+    isActive: { type: Boolean, default: true },
     // reset password fields
     resetPasswordCode: { type: String },
     resetPasswordExpires: { type: Date },

@@ -122,9 +122,9 @@ export const createUserByTeacher = async (
       section,
     } = req.body;
 
-    if (!["student", "event_organizer"].includes(role)) {
+    if (!["student", "CSSG_officer", "Saso"].includes(role)) {
       return res.status(403).json({
-        message: "Teachers can only create students or event organizers.",
+        message: "Teachers can only create students, CSSG officers, or Saso.",
       });
     }
 
@@ -226,9 +226,9 @@ export const createUserByAdmin = async (
     } = req.body;
 
     // ✅ Allowed roles
-    if (!["teacher", "student", "event_organizer"].includes(role)) {
+    if (!["teacher", "student", "CSSG_officer", "Saso"].includes(role)) {
       return res.status(403).json({
-        message: "Invalid role. Admin can only create teacher, student, or event organizer.",
+        message: "Invalid role. Admin can only create teacher, student, CSSG officer, or Saso.",
       });
     }
 
