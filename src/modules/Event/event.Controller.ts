@@ -259,3 +259,40 @@ export const getUpComingEvents = async (req: Request, res: Response) => {
     });
   }
 };
+
+
+export const getFinishedEvents = async (req: Request, res: Response) => {
+  try {
+    const finishedEvents = await Event.find({
+      status: EventStatus.FINISHED,
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: finishedEvents,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
+  }
+}
+
+export const getTotalUpComingEvents = async (req: Request, res: Response) => {
+  try {
+    const upComingEvents = await Event.find({
+      status: EventStatus.UPCOMING,
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: upComingEvents,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
+  }
+}

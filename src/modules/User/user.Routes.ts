@@ -14,6 +14,7 @@ import {
          createUserByTeacher,
          getAllUsers,
          createUserByAdmin,
+         getTotalUsers,
         } from "./user.Controller";
 
 
@@ -33,5 +34,6 @@ router.post("/create-user-by-teacher", AuthCookieMiddleware, createUserByTeacher
 router.post("/create-user-by-admin", AuthCookieMiddleware, createUserByAdmin);
 router.get("/get-all-users", getAllUsers);
 router.get("/get-users-same-department", AuthCookieMiddleware, getUsersSameDepartment);
+router.get("/get-total-users", getTotalUsers);
 
 export default router;

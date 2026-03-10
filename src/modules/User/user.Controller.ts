@@ -710,3 +710,14 @@ export const getAllUsers = async (req: Request, res: Response) => {
     return res.status(500).json({ message: "Server error" });
   }
 };
+
+
+export const getTotalUsers = async(req: Request, res: Response) => {
+  try {
+    const totalUsers = await User.countDocuments({ role: { $ne: "admin" } });
+    return res.json({ totalUsers });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Server error" });
+  }
+};

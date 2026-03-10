@@ -29,6 +29,7 @@
   app.use("/api/event", require("./modules/Event/event.Routes").default);
   app.use("/api/face", require("./modules/Face/face.routes").default);
   app.use("/api/location", require("./modules/Location/location.routes").default);
+  app.use("/api/department", require("./modules/Department/department.routes").default);
 
 
   export default app;
