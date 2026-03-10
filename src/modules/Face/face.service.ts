@@ -8,51 +8,47 @@ const FACESET_ID = "students";
 
 export class FaceService {
 
-  // 1. Detect face from image
   static async detectFace(imageBuffer: Buffer) {
     const formData = new FormData();
+
     formData.append("api_key", API_KEY);
     formData.append("api_secret", API_SECRET);
     formData.append("image_file", imageBuffer, "face.jpg");
 
-    const response = await axios.post(`${FACEPP_URL}/detect`, formData, {
+    const res = await axios.post(`${FACEPP_URL}/detect`, formData, {
       headers: formData.getHeaders(),
     });
 
-    return response.data;
+    return res.data;
   }
 
-  // 2. Search using FACE TOKEN (NOT image again)
-  static async identifyByToken(faceToken: string) {
+  static async searchFace(faceToken: string) {
     const formData = new FormData();
+
     formData.append("api_key", API_KEY);
     formData.append("api_secret", API_SECRET);
     formData.append("outer_id", FACESET_ID);
     formData.append("face_token", faceToken);
 
-    const response = await axios.post(`${FACEPP_URL}/search`, formData, {
+    const res = await axios.post(`${FACEPP_URL}/search`, formData, {
       headers: formData.getHeaders(),
     });
 
-    return response.data;
+    return res.data;
   }
 
-  // 3. Add face to FaceSet
-  static async addFaceToSet(faceToken: string) {
+  static async addFace(faceToken: string) {
     const formData = new FormData();
+
     formData.append("api_key", API_KEY);
     formData.append("api_secret", API_SECRET);
     formData.append("outer_id", FACESET_ID);
     formData.append("face_tokens", faceToken);
 
-    const response = await axios.post(
-      `${FACEPP_URL}/faceset/addface`,
-      formData,
-      {
-        headers: formData.getHeaders(),
-      }
-    );
+    const res = await axios.post(`${FACEPP_URL}/faceset/addface`, formData, {
+      headers: formData.getHeaders(),
+    });
 
-    return response.data;
+    return res.data;
   }
 }

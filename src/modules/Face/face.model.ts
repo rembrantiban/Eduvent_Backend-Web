@@ -1,23 +1,33 @@
 import mongoose, { Schema, Document } from "mongoose";
 
 export interface IFaceUser extends Document {
-  userId: string;      // student ID or user ID
-  name: string;        // full name
-  faceToken: string;   // from Face++
+  userId: string;
+  name: string;
+  faceToken: string;
   createdAt: Date;
   updatedAt: Date;
 }
 
-const FaceUserSchema: Schema = new Schema<IFaceUser>(
+const FaceUserSchema = new Schema<IFaceUser>(
   {
-    userId: { type: String, required: true, unique: true },
-    name: { type: String, required: true },
-    faceToken: { type: String, required: true, unique: true },
+    userId: {
+      type: String,
+      required: true,
+      unique: true,
+      index: true,
+    },
+    name: {
+      type: String,
+      required: true,
+    },
+    faceToken: {
+      type: String,
+      required: true,
+      unique: true,
+      index: true,
+    },
   },
   { timestamps: true }
 );
 
-export const FaceUser = mongoose.model<IFaceUser>(
-  "FaceUser",
-  FaceUserSchema
-);
+export const FaceUser = mongoose.model<IFaceUser>("FaceUser", FaceUserSchema);
