@@ -15,6 +15,7 @@ import {
          getAllUsers,
          createUserByAdmin,
          getTotalUsers,
+         deleteUserAccount
         } from "./user.Controller";
 
 
@@ -35,5 +36,6 @@ router.post("/create-user-by-admin", AuthCookieMiddleware, createUserByAdmin);
 router.get("/get-all-users", getAllUsers);
 router.get("/get-users-same-department", AuthCookieMiddleware, getUsersSameDepartment);
 router.get("/get-total-users", getTotalUsers);
+router.delete("/delete-user/:id", AuthCookieMiddleware, deleteUserAccount);
 
 export default router;

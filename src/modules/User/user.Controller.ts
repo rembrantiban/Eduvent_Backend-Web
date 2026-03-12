@@ -320,7 +320,7 @@ export const loginAdmin = async (req: Request, res: Response) => {
 
     const user = await User.findOne({
       email: email,
-      role: { $in: ["admin", "teacher"] },
+      role: { $in: ["admin", "teacher", "Saso", "CSSG_officer"] },
     }).select("+password");
 
     if (!user) {
@@ -721,3 +721,21 @@ export const getTotalUsers = async(req: Request, res: Response) => {
     return res.status(500).json({ message: "Server error" });
   }
 };
+
+
+export const deleteUserAccount = async(req:Request, res: Response) => {
+     try{
+        const { id } = req.params;
+        const deleteUser = await User.findByIdAndDelete(id);
+
+        if(!deleteUser){
+           return res.status(404).json({ success: false, message: "User not found"});
+        }
+
+        return res.status(200).json({ success:true, deleteUser: deleteUser})
+     }
+     catch(error){
+        console.error("Internal Server Error", error)
+        return res.status(500).json({ success: false, message: "Something went wrong"})
+     }
+}
