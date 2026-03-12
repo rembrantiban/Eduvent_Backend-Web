@@ -63,7 +63,7 @@ export const createEvent = async (req: Request, res: Response) => {
 
 export const getEvents = async (req: Request, res: Response) => {
   try {
-    const events = await Event.find().sort({ date: 1 });
+    const events = await Event.find().sort({ createdAt: -1 });
 
     const updatedEvents = await Promise.all(
       events.map(async (event) => {
