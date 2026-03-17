@@ -2,15 +2,22 @@ import { Request, Response } from "express";
 import { Event, EventStatus, IEvent } from "./event.Model";
 import  cloudinary   from "../../config/cloudinary";  
 import { calculateEventStatus } from "../../common/utils/eventStatus";
+import mongoose from "mongoose";
 
 
 export const createEvent = async (req: Request, res: Response) => {
   try {
-    const { title, description, date, time, location } = req.body;
+    const { title, description, date, time, locationId } = req.body;
 
-    if (!title || !description || !date || !time || !location) {
+    if (!title || !description || !date || !time || !locationId) {
       return res.status(400).json({
         message: "Please provide all required fields.",
+      });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(locationId)) {
+      return res.status(400).json({
+        message: "Invalid locationId.",
       });
     }
 
@@ -43,15 +50,16 @@ export const createEvent = async (req: Request, res: Response) => {
       description,
       date,
       time,
-      location,
+      locationId,
       status,
     });
 
     const savedEvent = await newEvent.save();
+    const populatedEvent = await savedEvent.populate("locationId");
 
     return res.status(201).json({
       success: true,
-      data: savedEvent,
+      data: populatedEvent,
     });
   } catch (err) {
     console.error(err, "Error in createEvent");
@@ -63,7 +71,9 @@ export const createEvent = async (req: Request, res: Response) => {
 
 export const getEvents = async (req: Request, res: Response) => {
   try {
-    const events = await Event.find().sort({ createdAt: -1 });
+    const events = await Event.find().sort()
+    .populate("locationId")
+    .sort({ createdAt: -1 })
 
     const updatedEvents = await Promise.all(
       events.map(async (event) => {
@@ -100,11 +110,17 @@ export const updateEvent = async (req: Request, res: Response) => {
   try {
     const eventId = req.params.id;
 
-    const { title, description, date, time, location } = req.body;
+    const { title, description, date, time, locationId } = req.body;
 
     const event = await Event.findById(eventId);
     if (!event) {
       return res.status(404).json({ message: "Event not found" });
+    }
+    
+     if (locationId && !mongoose.Types.ObjectId.isValid(locationId)) {
+      return res.status(400).json({
+        message: "Invalid locationId.",
+      });
     }
 
     if (req.file) {
@@ -130,7 +146,7 @@ export const updateEvent = async (req: Request, res: Response) => {
     if (description) event.description = description;
     if (date) event.date = new Date(date);
     if (time) event.time = time;
-    if (location) event.location = location;
+    if (locationId) event.locationId = locationId;
 
     event.status = calculateEventStatus(
       event.date,
@@ -139,10 +155,11 @@ export const updateEvent = async (req: Request, res: Response) => {
     );
 
     const updatedEvent = await event.save();
+    const populatedEvent = await updatedEvent.populate("locationId");
 
     return res.status(200).json({
       success: true,
-      data: updatedEvent,
+      data: populatedEvent,
     });
   } catch (err) {
     console.error("Error in updateEvent", err);
@@ -246,7 +263,7 @@ export const getUpComingEvents = async (req: Request, res: Response) => {
   try {
     const upComingEvents = await Event.find({
       status: EventStatus.UPCOMING  , 
-    });
+    }).populate("locationId");
 
     return res.status(200).json({
       success: true,
@@ -265,7 +282,7 @@ export const getFinishedEvents = async (req: Request, res: Response) => {
   try {
     const finishedEvents = await Event.find({
       status: EventStatus.FINISHED,
-    });
+    }).populate("locationId");
 
     return res.status(200).json({
       success: true,
@@ -283,7 +300,7 @@ export const getTotalUpComingEvents = async (req: Request, res: Response) => {
   try {
     const upComingEvents = await Event.find({
       status: EventStatus.UPCOMING,
-    });
+    }).populate("locationId");
 
     return res.status(200).json({
       success: true,

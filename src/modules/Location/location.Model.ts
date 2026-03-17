@@ -3,6 +3,8 @@ import mongoose, { Document, Schema } from "mongoose";
 export interface ILocation extends Document {
   venue: string;
   location: string;
+  latitude: number;
+  longitude: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -21,6 +23,16 @@ const LocationSchema = new Schema<ILocation>(
       required: true,
       trim: true,
       unique: true
+    },
+    
+    latitude: {
+      type: Number,
+      required: true,
+    },
+
+    longitude: {
+      type: Number,
+      required: true,
     },
   },
   {

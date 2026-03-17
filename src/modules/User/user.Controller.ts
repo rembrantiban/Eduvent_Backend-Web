@@ -447,42 +447,40 @@ export const loginUser = async (req: Request, res: Response) => {
 
 export const completeProfile = async (req: Request, res: Response) => {
   try {
+
+    if (!req.user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
     const { yearLevel, department, section } = req.body;
     const userId = req.user._id;
 
     if (!yearLevel || !department || !section) {
-      return res.status(400).json({ message: "Please provide all required fields." });
+      return res.status(400).json({
+        message: "Please provide all required fields.",
+      });
     }
+
     const updatedUser = await User.findByIdAndUpdate(
       userId,
-      { yearLevel, department, section },
+      {
+        yearLevel: yearLevel.trim(),
+        department: department.trim(),
+        section: section.trim(),
+      },
       { new: true }
     );
 
-    if (!updatedUser) {
-      return res.status(404).json({ message: "User not found." });
-    }
-
     return res.status(200).json({
-      messege: "Profile completed successfully.",
-      user: {
-        id: updatedUser._id,
-        firstName: updatedUser.firstName,
-        lastName: updatedUser.lastName,
-        email: updatedUser.email,
-        role: updatedUser.role,
-        studentId: updatedUser.studentId,
-        yearLevel: updatedUser.yearLevel,
-        department: updatedUser.department,
-        section: updatedUser.section,
-      }
+      message: "Profile completed successfully",
+      user: updatedUser,
     });
-  }
-  catch (err) {
+
+  } catch (err) {
     console.error(err);
-    return res.status(500).json({ message: "Internal server error" });
+    res.status(500).json({ message: "Internal server error" });
   }
-}
+};
 
 export const requestResetCode = async (req: Request, res: Response) => {
   try {

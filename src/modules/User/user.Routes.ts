@@ -1,5 +1,6 @@
 import express from "express";
 import { AuthCookieMiddleware } from "../../middleware/AuthMiddleware";
+import { MobileAuth } from "../../middleware/AuthCookieMiddleware"
 import {
          signupUser, 
          loginUser,
@@ -27,7 +28,7 @@ router.post("/login", loginUser);
 router.post("/admin-login", loginAdmin);
 router.get("/check-auth", AuthCookieMiddleware, checkUserAuth);
 router.post("/logout", logoutUser);
-router.post("/complete-profile", AuthCookieMiddleware, completeProfile);
+router.put("/complete-profile", MobileAuth, completeProfile);
 router.post("/request-password-reset", requestResetCode);
 router.post("/verify-password-reset", verifyResetCode);
 router.post("/confirm-password-reset", resetPassword);

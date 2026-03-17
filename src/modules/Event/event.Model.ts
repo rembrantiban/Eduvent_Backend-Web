@@ -15,7 +15,7 @@ export interface IEvent extends Document {
     date: Date;
     time: string;
     status: EventStatus;
-    location: string;
+    locationId: mongoose.Types.ObjectId;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -33,7 +33,7 @@ const EventSchema: Schema = new Schema<IEvent>(
         default: EventStatus.UPCOMING,
         required: true,
         },
-        location: { type: String, required: true },
+        locationId: { type: mongoose.Types.ObjectId, ref: "Location", required: true },
         createdAt: { type: Date, default: Date.now },
         updatedAt: { type: Date, default: Date.now },
     },

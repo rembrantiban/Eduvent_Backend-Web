@@ -10,7 +10,6 @@ export class FaceService {
 
   static async detectFace(imageBuffer: Buffer) {
     const formData = new FormData();
-
     formData.append("api_key", API_KEY);
     formData.append("api_secret", API_SECRET);
     formData.append("image_file", imageBuffer, "face.jpg");
