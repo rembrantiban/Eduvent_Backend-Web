@@ -737,3 +737,22 @@ export const deleteUserAccount = async(req:Request, res: Response) => {
         return res.status(500).json({ success: false, message: "Something went wrong"})
      }
 }
+
+
+export const savePushToken = async (req: Request, res: Response) => {
+  try {
+    const { pushToken } = req.body;
+
+    if (!pushToken) {
+      return res.status(400).json({ message: "Push token required" });
+    }
+
+    await User.findByIdAndUpdate(req.user?._id, {
+      pushToken,
+    });
+
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to save token" });
+  }
+};

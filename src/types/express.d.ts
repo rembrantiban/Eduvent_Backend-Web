@@ -6,7 +6,7 @@ import { Multer } from "multer";
 declare global {
   namespace Express {
     interface Request {
-      user: IUser & { _id: string }, any;
+      user: IUser & { _id: string };
       event: IEvent & { _id: string };
       location: ILocation & { _id: string };
       file?: Multer.File;

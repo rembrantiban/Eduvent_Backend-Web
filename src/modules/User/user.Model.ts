@@ -9,6 +9,12 @@ export interface IUser extends Document {
   password: string;
   role: UserRole;
   isActive: boolean;
+
+  //face Register 
+
+  isFaceRegistered: boolean,
+
+   pushToken?: string;
   
   // Student-specific fields
   studentId?: string;
@@ -31,6 +37,15 @@ const UserSchema: Schema = new Schema<IUser>(
     password: { type: String, required: true },
     role: { type: String, enum: ["admin", "teacher","CSSG_officer", "Saso", "student"], default: "student" },
     isActive: { type: Boolean, default: true },
+
+    isFaceRegistered:{ type: Boolean, default: false },
+
+
+    pushToken: {
+      type: String,
+      default: null,
+    },
+    
     // reset password fields
     resetPasswordCode: { type: String },
     resetPasswordExpires: { type: Date },

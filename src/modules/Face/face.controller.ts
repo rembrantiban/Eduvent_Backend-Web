@@ -1,6 +1,11 @@
 import { Request, Response } from "express";
 import { FaceService } from "./face.service";
 import { FaceUser } from "./face.model";
+import { User } from "../User/user.Model"
+
+const delay = (ms: number) =>
+  new Promise<void>((resolve) => setTimeout(resolve, ms));
+
 
 export class FaceController {
 
@@ -8,6 +13,16 @@ export class FaceController {
 
   try {
     const { userId, name } = req.body;
+
+    const user = await User.findById(userId)
+
+    if(!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if(user.isFaceRegistered) {
+      return res.status(409).json({ message: "User already has registered face" });
+    }
 
     if (!req.file) {
       return res.status(400).json({ message: "Image required" });
@@ -28,6 +43,8 @@ export class FaceController {
 
     // 2️⃣ Detect face
     const detect = await FaceService.detectFace(req.file.buffer);
+
+    await delay(800)
 
     if (!detect.faces || detect.faces.length === 0) {
       return res.status(400).json({
@@ -58,6 +75,8 @@ export class FaceController {
       }
     }
 
+    await delay(800)
+
     // 4️⃣ Add face to FaceSet
     await FaceService.addFace(faceToken);
 
@@ -68,9 +87,15 @@ export class FaceController {
       faceToken
     });
 
+    await User.findByIdAndUpdate(userId, {
+      isFaceRegistered: true
+    });
+
+
     return res.status(201).json({
       message: "Face registered successfully",
-      data: faceUser
+      data: faceUser,
+      isFaceRegister: true
     });
 
   } catch (error: any) {

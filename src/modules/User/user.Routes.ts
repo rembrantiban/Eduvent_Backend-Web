@@ -16,7 +16,8 @@ import {
          getAllUsers,
          createUserByAdmin,
          getTotalUsers,
-         deleteUserAccount
+         deleteUserAccount,
+         savePushToken
         } from "./user.Controller";
 
 
@@ -38,5 +39,6 @@ router.get("/get-all-users", getAllUsers);
 router.get("/get-users-same-department", AuthCookieMiddleware, getUsersSameDepartment);
 router.get("/get-total-users", getTotalUsers);
 router.delete("/delete-user/:id", AuthCookieMiddleware, deleteUserAccount);
+router.post("/save-push-token", MobileAuth, savePushToken);
 
 export default router;
