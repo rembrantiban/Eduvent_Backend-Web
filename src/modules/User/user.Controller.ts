@@ -346,8 +346,8 @@ export const loginAdmin = async (req: Request, res: Response) => {
     // ✅ SET COOKIE
     res.cookie("user_token", token, {
       httpOnly: true,
-      secure: false,        // true in production (HTTPS)
-      sameSite: "lax",      // use "none" + secure:true if cross-site HTTPS
+      secure: true,        // true in production (HTTPS)
+      sameSite: "none",      // use "none" + secure:true if cross-site HTTPS
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
