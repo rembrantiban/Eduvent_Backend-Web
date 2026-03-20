@@ -1,7 +1,12 @@
   import express from "express";
   import cors from "cors";
   import cookieParser from "cookie-parser";
-
+  import  userRoutes  from "./modules/User/user.Routes"
+  import eventRoutes from "./modules/Event/event.routes"
+  import faceRoutes from "./modules/Face/face.routes"
+  import locationRoutes from "./modules/Location/location.routes"
+  import departmentRoutes from "./modules/Department/department.routes"
+  import attendanceRoutes from "./modules/Attendance/attendance.routes"
 
   const app = express();
 
@@ -25,12 +30,11 @@
   });
 
 
-  app.use("/api/auth", require("./modules/User/user.Routes").default);
-  app.use("/api/event", require("./modules/Event/event.Routes").default);
-  app.use("/api/face", require("./modules/Face/face.routes").default);
-  app.use("/api/location", require("./modules/Location/location.routes").default);
-  app.use("/api/department", require("./modules/Department/department.routes").default);
-  app.use("/api/attendance", require("./modules/Attendance/attendance.routes").default);
-
+  app.use("/api/auth", userRoutes);
+  app.use("/api/event", eventRoutes);
+  app.use("/api/face", faceRoutes);
+  app.use("/api/location", locationRoutes);
+  app.use("/api/department", departmentRoutes);
+  app.use("/api/attendance", attendanceRoutes);
 
   export default app;
