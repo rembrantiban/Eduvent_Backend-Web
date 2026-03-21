@@ -128,8 +128,20 @@ export const getEvents = async (req: Request, res: Response) => {
     );
 
     const updatedEvents = events.map((event) => {
-      const [startH, startM] = event.time.split(":").map(Number);
-      const [endH, endM] = event.endTime.split(":").map(Number);
+      let startH = 0, startM = 0;
+      let endH = 0, endM = 0;
+
+      if (event.time && event.time.includes(":")) {
+        [startH, startM] = event.time.split(":").map(Number);
+      }
+
+      if (event.endTime && event.endTime.includes(":")) {
+        [endH, endM] = event.endTime.split(":").map(Number);
+      } else {
+        // ✅ fallback: +1 hour
+        endH = startH + 1;
+        endM = startM;
+}
 
       // ✅ build start time
       const eventStart = new Date(
