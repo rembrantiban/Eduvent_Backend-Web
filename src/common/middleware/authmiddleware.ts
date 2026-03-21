@@ -1,4 +1,3 @@
-// authmiddleware.ts
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { User, IUser } from "../../modules/User/user.Model";
@@ -8,11 +7,14 @@ export const requireAuth = async (
   res: Response,
   next: NextFunction
 ) => {
-  const token = req.cookies?.user_token || req.headers.authorization?.split(" ")[1];
+  // 🔥 HEADER ONLY
+  const authHeader = req.headers.authorization;
 
-  if (!token) {
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
     return res.status(401).json({ message: "Unauthorized" });
   }
+
+  const token = authHeader.split(" ")[1];
 
   try {
     const decoded = jwt.verify(
@@ -26,7 +28,6 @@ export const requireAuth = async (
       return res.status(401).json({ message: "User not found" });
     }
 
-    // ✅ Cast _id to string
     req.user = {
       ...user.toObject(),
       _id: user._id.toString(),
@@ -34,7 +35,7 @@ export const requireAuth = async (
 
     next();
   } catch (err) {
-    console.error(err);
+    console.error("Auth error:", err);
     return res.status(401).json({ message: "Invalid token" });
   }
 };

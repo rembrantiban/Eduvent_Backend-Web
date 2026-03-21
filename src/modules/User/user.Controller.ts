@@ -354,6 +354,7 @@ export const loginAdmin = async (req: Request, res: Response) => {
 
     return res.status(200).json({
       message: "Login successful.",
+      token,
       user: {
         id: user._id,
         firstName: user.firstName,
@@ -593,29 +594,26 @@ export const logoutUser = async (req: Request, res: Response) => {
 
 export const checkUserAuth = async (req: Request, res: Response) => {
   try {
-    if (!req.user || !req.user._id) {
+    const userId = req.user?._id;
+
+    if (!userId) {
       return res.status(401).json({ message: "Not authenticated" });
     }
 
-    const userId = req.user._id;
-    const user = await User.findById(userId).select("-password");
-
-    if (!user) {
-      return res.status(404).json({ message: "User not found." });
-    }
-
+    // 🔥 Optional optimization: skip DB call if not needed
     return res.status(200).json({
       user: {
-        id: user._id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        role: user.role,
-        studentId: user.studentId,
-        yearLevel: user.yearLevel,
-        department: user.department,
+        id: req.user._id,
+        firstName: req.user.firstName,
+        lastName: req.user.lastName,
+        email: req.user.email,
+        role: req.user.role,
+        studentId: req.user.studentId,
+        yearLevel: req.user.yearLevel,
+        department: req.user.department,
       },
     });
+
   } catch (err) {
     console.error(err);
     return res.status(500).json({ message: "Internal server error" });
