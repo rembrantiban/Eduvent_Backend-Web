@@ -14,6 +14,7 @@ export interface IEvent extends Document {
     description: string;
     date: Date;
     time: string;
+    endTime: string;
     status: EventStatus;
     locationId: mongoose.Types.ObjectId;
     createdAt: Date;
@@ -27,6 +28,8 @@ const EventSchema: Schema = new Schema<IEvent>(
         description: { type: String, required: true },
         date: { type: Date, required: true },
         time: { type: String, required: true },
+        endTime: { type: String, required: true },
+
        status: {
       type: String,
         enum: Object.values(EventStatus),

@@ -7,22 +7,32 @@ import { AnyBulkWriteOperation } from "mongoose";
 
 export const createEvent = async (req: Request, res: Response) => {
   try {
-    const { title, description, date, time, locationId } = req.body;
+    const { title, description, date, time, endTime, locationId } = req.body;
 
-    if (!title || !description || !date || !time || !locationId) {
+    // ✅ required fields
+    if (!title || !description || !date || !time || !endTime || !locationId) {
       return res.status(400).json({
         message: "Please provide all required fields.",
       });
     }
 
+    // ✅ validate ObjectId
     if (!mongoose.Types.ObjectId.isValid(locationId)) {
       return res.status(400).json({
         message: "Invalid locationId.",
       });
     }
 
+    // ✅ normalize date
     const parseDate = new Date(date);
     parseDate.setHours(0, 0, 0, 0);
+
+    // ✅ validate time order
+    if (time >= endTime) {
+      return res.status(400).json({
+        message: "End time must be after start time",
+      });
+    }
 
     let imageUrl: string | undefined;
 
@@ -45,14 +55,46 @@ export const createEvent = async (req: Request, res: Response) => {
       imageUrl = uploadResult.secure_url;
     }
 
-    const status = calculateEventStatus(parseDate, time, EventStatus.UPCOMING); 
-    
+    // 🔥 OPTIONAL: compute initial status correctly
+    const now = new Date(
+      new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" })
+    );
+
+    const [startH, startM] = time.split(":").map(Number);
+    const [endH, endM] = endTime.split(":").map(Number);
+
+    const eventStart = new Date(
+      parseDate.getFullYear(),
+      parseDate.getMonth(),
+      parseDate.getDate(),
+      startH,
+      startM
+    );
+
+    const eventEnd = new Date(
+      parseDate.getFullYear(),
+      parseDate.getMonth(),
+      parseDate.getDate(),
+      endH,
+      endM
+    );
+
+    let status = EventStatus.UPCOMING;
+
+    if (now >= eventStart && now <= eventEnd) {
+      status = EventStatus.ONGOING;
+    } else if (now > eventEnd) {
+      status = EventStatus.FINISHED;
+    }
+
+    // ✅ create event
     const newEvent: IEvent = new Event({
       imageUrl,
       title,
       description,
       date: parseDate,
       time,
+      endTime,
       locationId,
       status,
     });
@@ -64,6 +106,7 @@ export const createEvent = async (req: Request, res: Response) => {
       success: true,
       data: populatedEvent,
     });
+
   } catch (err) {
     console.error(err, "Error in createEvent");
     return res.status(500).json({
@@ -80,25 +123,35 @@ export const getEvents = async (req: Request, res: Response) => {
 
     const bulkOps: AnyBulkWriteOperation<IEvent>[] = [];
 
-    const updatedEvents = events.map((event) => {
-      const [hours, minutes] = event.time.split(":").map(Number);
+    const now = new Date(
+      new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" })
+    );
 
+    const updatedEvents = events.map((event) => {
+      const [startH, startM] = event.time.split(":").map(Number);
+      const [endH, endM] = event.endTime.split(":").map(Number);
+
+      // ✅ build start time
       const eventStart = new Date(
         event.date.getFullYear(),
         event.date.getMonth(),
         event.date.getDate(),
-        hours,
-        minutes,
+        startH,
+        startM,
         0,
         0
       );
 
-      const eventEnd = new Date(eventStart);
-      eventEnd.setHours(eventEnd.getHours() + 2);
-
-      const now = new Date(
-      new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" })
-    );
+      // ✅ build end time (FIXED)
+      const eventEnd = new Date(
+        event.date.getFullYear(),
+        event.date.getMonth(),
+        event.date.getDate(),
+        endH,
+        endM,
+        0,
+        0
+      );
 
       let newStatus = EventStatus.UPCOMING;
 
@@ -110,7 +163,6 @@ export const getEvents = async (req: Request, res: Response) => {
         newStatus = EventStatus.FINISHED;
       }
 
-      // ✅ collect updates (do NOT update inside loop)
       if (event.status !== newStatus) {
         bulkOps.push({
           updateOne: {
@@ -119,13 +171,12 @@ export const getEvents = async (req: Request, res: Response) => {
           },
         });
 
-        event.status = newStatus; // update response immediately
+        event.status = newStatus;
       }
 
       return event;
     });
 
-    // ✅ execute all DB updates in ONE operation (very important)
     if (bulkOps.length > 0) {
       await Event.bulkWrite(bulkOps);
     }
@@ -189,6 +240,7 @@ export const updateEvent = async (req: Request, res: Response) => {
     event.status = calculateEventStatus(
       event.date,
       event.time,
+      event.endTime,
       event.status
     );
 
