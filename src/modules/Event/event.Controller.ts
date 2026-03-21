@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { Event, EventStatus, IEvent } from "./event.Model";
-import  cloudinary   from "../../config/cloudinary";  
+import cloudinary from "../../config/cloudinary";
 import { calculateEventStatus } from "../../common/utils/eventStatus";
 import mongoose from "mongoose";
 
@@ -20,6 +20,9 @@ export const createEvent = async (req: Request, res: Response) => {
         message: "Invalid locationId.",
       });
     }
+
+    const parseDate = new Date(date);
+    parseDate.setHours(0, 0, 0, 0);
 
     let imageUrl: string | undefined;
 
@@ -41,14 +44,14 @@ export const createEvent = async (req: Request, res: Response) => {
 
       imageUrl = uploadResult.secure_url;
     }
-    
-     const status = calculateEventStatus(new Date(date), time, EventStatus.UPCOMING);
 
+    const status = calculateEventStatus(parseDate, time, EventStatus.UPCOMING); 
+    
     const newEvent: IEvent = new Event({
       imageUrl,
       title,
       description,
-      date,
+      date: parseDate,
       time,
       locationId,
       status,
@@ -71,40 +74,57 @@ export const createEvent = async (req: Request, res: Response) => {
 
 export const getEvents = async (req: Request, res: Response) => {
   try {
-    const events = await Event.find().sort()
-    .populate("locationId")
-    .sort({ createdAt: -1 })
+    const events = await Event.find()
+      .populate("locationId")
+      .sort({ createdAt: -1 });
 
-    const updatedEvents = await Promise.all(
-      events.map(async (event) => {
-        const newStatus = calculateEventStatus(
-          event.date,
-          event.time,
-          event.status
-        );
+    const computedEvents = events.map((event) => {
+  const [hours, minutes] = event.time.split(":").map(Number);
 
-        if (event.status !== newStatus) {
-          event.status = newStatus;
-          await event.save();
-        }
+  const eventStart = new Date(
+    event.date.getFullYear(),
+    event.date.getMonth(),
+    event.date.getDate(),
+    hours,
+    minutes,
+    0,
+    0
+  );
 
-        return event;
-      })
-    );
+  const eventEnd = new Date(eventStart);
+  eventEnd.setHours(eventEnd.getHours() + 2);
+
+  const now = new Date();
+
+  let status = EventStatus.UPCOMING;
+
+  if (event.status === EventStatus.CANCELLED) {
+    status = EventStatus.CANCELLED;
+  } else if (now >= eventStart && now <= eventEnd) {
+    status = EventStatus.ONGOING;
+  } else if (now > eventEnd) {
+    status = EventStatus.FINISHED;
+  }
+
+  return {
+    ...event.toObject(),
+    status,
+  };
+});
 
     return res.status(200).json({
       success: true,
-      data: updatedEvents,
+      data: computedEvents,
     });
+
   } catch (err) {
+    console.error(err);
     return res.status(500).json({
       success: false,
       message: "Internal Server Error",
     });
   }
 };
-
-
 
 export const updateEvent = async (req: Request, res: Response) => {
   try {
@@ -116,8 +136,8 @@ export const updateEvent = async (req: Request, res: Response) => {
     if (!event) {
       return res.status(404).json({ message: "Event not found" });
     }
-    
-     if (locationId && !mongoose.Types.ObjectId.isValid(locationId)) {
+
+    if (locationId && !mongoose.Types.ObjectId.isValid(locationId)) {
       return res.status(400).json({
         message: "Invalid locationId.",
       });
@@ -171,7 +191,7 @@ export const updateEvent = async (req: Request, res: Response) => {
 };
 
 
- // delete Controller Component
+// delete Controller Component
 
 const getPublicIdFromUrl = (url: string): string | null => {
   try {
@@ -192,7 +212,7 @@ const getPublicIdFromUrl = (url: string): string | null => {
 };
 
 
- export const deleteEvent = async (req: Request, res: Response) => {
+export const deleteEvent = async (req: Request, res: Response) => {
   try {
     const eventId = req.params.id;
 
@@ -232,11 +252,11 @@ export const updateEventStatusToCanceled = async (req: Request, res: Response) =
     const eventId = req.params.id;
     const event = await Event.findById(eventId);
 
-    if(event?.status === EventStatus.FINISHED) {
+    if (event?.status === EventStatus.FINISHED) {
       return res.status(400).json({ message: "Cannot cancel a finished event" });
     }
 
-    if(event?.status === EventStatus.CANCELLED) {
+    if (event?.status === EventStatus.CANCELLED) {
       return res.status(400).json({ message: "Event is already cancelled" });
     }
 
@@ -244,7 +264,7 @@ export const updateEventStatusToCanceled = async (req: Request, res: Response) =
       return res.status(404).json({ message: "Event not found" });
     }
 
-    event.status =  EventStatus.CANCELLED; // ✅ matches enum
+    event.status = EventStatus.CANCELLED; // ✅ matches enum
     await event.save();
 
     return res.status(200).json({
@@ -262,7 +282,7 @@ export const updateEventStatusToCanceled = async (req: Request, res: Response) =
 export const getUpComingEvents = async (req: Request, res: Response) => {
   try {
     const upComingEvents = await Event.find({
-      status: EventStatus.UPCOMING  , 
+      status: EventStatus.UPCOMING,
     }).populate("locationId");
 
     return res.status(200).json({

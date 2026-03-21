@@ -6,29 +6,32 @@ export const calculateEventStatus = (
   currentStatus: EventStatus
 ): EventStatus => {
 
-  // ❌ Never auto-change cancelled events
   if (currentStatus === EventStatus.CANCELLED) {
     return EventStatus.CANCELLED;
   }
 
-  const now = new Date();
+  const now = new Date(
+    new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" })
+  );
 
-  // Build event start datetime
   const [hours, minutes] = time.split(":").map(Number);
-  const eventStart = new Date(date);
-  eventStart.setHours(hours, minutes, 0, 0);
 
-  // Assume duration = 2 hours (change if needed)
+  const localDate = new Date(date);
+  const eventStart = new Date(
+    localDate.getFullYear(),
+    localDate.getMonth(),
+    localDate.getDate(),
+    hours,
+    minutes,
+    0,
+    0
+  );
+
   const eventEnd = new Date(eventStart);
   eventEnd.setHours(eventEnd.getHours() + 2);
 
-  if (now < eventStart) {
-    return EventStatus.UPCOMING;
-  }
-
-  if (now >= eventStart && now <= eventEnd) {
-    return EventStatus.ONGOING;
-  }
+  if (now < eventStart) return EventStatus.UPCOMING;
+  if (now <= eventEnd) return EventStatus.ONGOING;
 
   return EventStatus.FINISHED;
 };
