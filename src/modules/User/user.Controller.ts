@@ -349,6 +349,7 @@ export const loginAdmin = async (req: Request, res: Response) => {
       secure: true,        // true in production (HTTPS)
       sameSite: "none",      // use "none" + secure:true if cross-site HTTPS
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      path:"/"
     });
 
     return res.status(200).json({
