@@ -13,7 +13,24 @@ const app = express();
 app.set("trust proxy", 1);
 app.use(cors(
   {
-    origin: process.env.CLIENT_URL || "http://localhost:5173",
+    origin: (origin, callback) => {
+      const allowedOrigins = [
+        process.env.CLIENT_URL?.replace(/\/$/, ""), 
+        "http://localhost:5173"
+      ];
+
+      const normalizedOrigin = origin?.replace(/\/$/, "");
+
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.includes(normalizedOrigin)) {
+        callback(null, true);
+      } else {
+        console.log("CORS blocked:", origin);
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
