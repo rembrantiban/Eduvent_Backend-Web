@@ -9,28 +9,24 @@ export const createEvent = async (req: Request, res: Response) => {
   try {
     const { title, description, date, time, endTime, locationId } = req.body;
 
-    // ✅ required fields
-    if (!title || !description || !date || !time || !endTime || !locationId) {
+    if (!title || !description || !date || !time || !locationId) {
       return res.status(400).json({
         message: "Please provide all required fields.",
       });
     }
 
-    // ✅ validate ObjectId
     if (!mongoose.Types.ObjectId.isValid(locationId)) {
       return res.status(400).json({
         message: "Invalid locationId.",
       });
     }
 
-    // ✅ normalize date
     const parseDate = new Date(date);
     parseDate.setHours(0, 0, 0, 0);
 
-    // ✅ validate time order
-    if (time >= endTime) {
+    if (time === endTime) {
       return res.status(400).json({
-        message: "End time must be after start time",
+        message: "Start time and end time cannot be the same.",
       });
     }
 
@@ -55,13 +51,23 @@ export const createEvent = async (req: Request, res: Response) => {
       imageUrl = uploadResult.secure_url;
     }
 
-    // 🔥 OPTIONAL: compute initial status correctly
+
     const now = new Date(
       new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" })
     );
 
-    const [startH, startM] = time.split(":").map(Number);
-    const [endH, endM] = endTime.split(":").map(Number);
+    const safeParseTime = (t?: string) => {
+      if (!t || !t.includes(":")) return [0, 0];
+      return t.split(":").map(Number);
+    };
+
+    const [startH, startM] = safeParseTime(time);
+    let [endH, endM] = safeParseTime(endTime);
+
+    if (!endTime) {
+      endH = startH + 1;
+      endM = startM;
+    }
 
     const eventStart = new Date(
       parseDate.getFullYear(),
@@ -79,11 +85,18 @@ export const createEvent = async (req: Request, res: Response) => {
       endM
     );
 
+    if (eventEnd < eventStart) {
+      eventEnd.setDate(eventEnd.getDate() + 1);
+    }
+
+    // ✅ STATUS LOGIC
     let status = EventStatus.UPCOMING;
 
-    if (now >= eventStart && now <= eventEnd) {
+    if (now < eventStart) {
+      status = EventStatus.UPCOMING;
+    } else if (now <= eventEnd) {
       status = EventStatus.ONGOING;
-    } else if (now > eventEnd) {
+    } else {
       status = EventStatus.FINISHED;
     }
 
@@ -114,6 +127,7 @@ export const createEvent = async (req: Request, res: Response) => {
     });
   }
 };
+
 
 export const getEvents = async (req: Request, res: Response) => {
   try {
@@ -211,7 +225,7 @@ export const updateEvent = async (req: Request, res: Response) => {
   try {
     const eventId = req.params.id;
 
-    const { title, description, date, time, locationId } = req.body;
+    const { title, description, date, time, endTime, locationId } = req.body;
 
     const event = await Event.findById(eventId);
     if (!event) {
@@ -221,6 +235,12 @@ export const updateEvent = async (req: Request, res: Response) => {
     if (locationId && !mongoose.Types.ObjectId.isValid(locationId)) {
       return res.status(400).json({
         message: "Invalid locationId.",
+      });
+    }
+
+    if (time && endTime && time === endTime) {
+      return res.status(400).json({
+        message: "Start time and end time cannot be the same.",
       });
     }
 
@@ -245,17 +265,72 @@ export const updateEvent = async (req: Request, res: Response) => {
 
     if (title) event.title = title;
     if (description) event.description = description;
-    if (date) event.date = new Date(date);
+
+    if (date) {
+      const parsed = new Date(date);
+      parsed.setHours(0, 0, 0, 0);
+      event.date = parsed;
+    }
+
     if (time) event.time = time;
+    if (endTime) event.endTime = endTime;
     if (locationId) event.locationId = locationId;
 
-    event.status = calculateEventStatus(
-      event.date,
-      event.time,
-      event.endTime,
-      event.status
+
+    const now = new Date(
+      new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" })
     );
 
+    const safeParseTime = (t?: string) => {
+      if (!t || !t.includes(":")) return [0, 0];
+      return t.split(":").map(Number);
+    };
+
+    const [startH, startM] = safeParseTime(event.time);
+    let [endH, endM] = safeParseTime(event.endTime);
+
+    if (!event.endTime) {
+      endH = startH + 1;
+      endM = startM;
+    }
+
+    const baseDate = new Date(event.date);
+
+    const eventStart = new Date(
+      baseDate.getFullYear(),
+      baseDate.getMonth(),
+      baseDate.getDate(),
+      startH,
+      startM
+    );
+
+    const eventEnd = new Date(
+      baseDate.getFullYear(),
+      baseDate.getMonth(),
+      baseDate.getDate(),
+      endH,
+      endM
+    );
+
+    if (eventEnd < eventStart) {
+      eventEnd.setDate(eventEnd.getDate() + 1);
+    }
+
+    let newStatus = EventStatus.UPCOMING;
+
+    if (event.status === EventStatus.CANCELLED) {
+      newStatus = EventStatus.CANCELLED;
+    } else if (now < eventStart) {
+      newStatus = EventStatus.UPCOMING;
+    } else if (now <= eventEnd) {
+      newStatus = EventStatus.ONGOING;
+    } else {
+      newStatus = EventStatus.FINISHED;
+    }
+
+    event.status = newStatus;
+
+    // ✅ save
     const updatedEvent = await event.save();
     const populatedEvent = await updatedEvent.populate("locationId");
 
@@ -263,6 +338,7 @@ export const updateEvent = async (req: Request, res: Response) => {
       success: true,
       data: populatedEvent,
     });
+
   } catch (err) {
     console.error("Error in updateEvent", err);
     return res.status(500).json({
@@ -272,8 +348,6 @@ export const updateEvent = async (req: Request, res: Response) => {
   }
 };
 
-
-// delete Controller Component
 
 const getPublicIdFromUrl = (url: string): string | null => {
   try {
