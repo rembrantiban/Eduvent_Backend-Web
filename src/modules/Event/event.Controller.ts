@@ -3,7 +3,7 @@ import { Event, EventStatus, IEvent } from "./event.Model";
 import cloudinary from "../../config/cloudinary";
 import { calculateEventStatus } from "../../common/utils/eventStatus";
 import mongoose from "mongoose";
-
+import { AnyBulkWriteOperation } from "mongoose";
 
 export const createEvent = async (req: Request, res: Response) => {
   try {
@@ -78,47 +78,65 @@ export const getEvents = async (req: Request, res: Response) => {
       .populate("locationId")
       .sort({ createdAt: -1 });
 
-    const computedEvents = events.map((event) => {
-  const [hours, minutes] = event.time.split(":").map(Number);
+    const bulkOps: AnyBulkWriteOperation<IEvent>[] = [];
 
-  const eventStart = new Date(
-    event.date.getFullYear(),
-    event.date.getMonth(),
-    event.date.getDate(),
-    hours,
-    minutes,
-    0,
-    0
-  );
+    const updatedEvents = events.map((event) => {
+      const [hours, minutes] = event.time.split(":").map(Number);
 
-  const eventEnd = new Date(eventStart);
-  eventEnd.setHours(eventEnd.getHours() + 2);
+      const eventStart = new Date(
+        event.date.getFullYear(),
+        event.date.getMonth(),
+        event.date.getDate(),
+        hours,
+        minutes,
+        0,
+        0
+      );
 
-  const now = new Date();
+      const eventEnd = new Date(eventStart);
+      eventEnd.setHours(eventEnd.getHours() + 2);
 
-  let status = EventStatus.UPCOMING;
+      const now = new Date(
+      new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" })
+    );
 
-  if (event.status === EventStatus.CANCELLED) {
-    status = EventStatus.CANCELLED;
-  } else if (now >= eventStart && now <= eventEnd) {
-    status = EventStatus.ONGOING;
-  } else if (now > eventEnd) {
-    status = EventStatus.FINISHED;
-  }
+      let newStatus = EventStatus.UPCOMING;
 
-  return {
-    ...event.toObject(),
-    status,
-  };
-});
+      if (event.status === EventStatus.CANCELLED) {
+        newStatus = EventStatus.CANCELLED;
+      } else if (now >= eventStart && now <= eventEnd) {
+        newStatus = EventStatus.ONGOING;
+      } else if (now > eventEnd) {
+        newStatus = EventStatus.FINISHED;
+      }
+
+      // ✅ collect updates (do NOT update inside loop)
+      if (event.status !== newStatus) {
+        bulkOps.push({
+          updateOne: {
+            filter: { _id: event._id },
+            update: { status: newStatus },
+          },
+        });
+
+        event.status = newStatus; // update response immediately
+      }
+
+      return event;
+    });
+
+    // ✅ execute all DB updates in ONE operation (very important)
+    if (bulkOps.length > 0) {
+      await Event.bulkWrite(bulkOps);
+    }
 
     return res.status(200).json({
       success: true,
-      data: computedEvents,
+      data: updatedEvents,
     });
 
   } catch (err) {
-    console.error(err);
+    console.error("Error in getEvents:", err);
     return res.status(500).json({
       success: false,
       message: "Internal Server Error",

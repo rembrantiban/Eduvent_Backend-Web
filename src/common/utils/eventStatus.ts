@@ -10,9 +10,9 @@ export const calculateEventStatus = (
     return EventStatus.CANCELLED;
   }
 
-  const now = new Date(
-    new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" })
-  );
+const now = new Date(
+  new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" })
+);
 
   const [hours, minutes] = time.split(":").map(Number);
 
