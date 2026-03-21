@@ -1,5 +1,5 @@
 import express from "express";
-import { AuthCookieMiddleware } from "../../middleware/AuthMiddleware";
+import { requireAuth } from "../../common/middleware/authmiddleware";
 import { MobileAuth } from "../../middleware/AuthCookieMiddleware"
 import {
          signupUser, 
@@ -27,18 +27,18 @@ const router = express.Router();
 router.post("/signup", signupUser);
 router.post("/login", loginUser);
 router.post("/admin-login", loginAdmin);
-router.get("/check-auth", AuthCookieMiddleware, checkUserAuth);
+router.get("/check-auth", requireAuth, checkUserAuth);
 router.post("/logout", logoutUser);
 router.put("/complete-profile", MobileAuth, completeProfile);
 router.post("/request-password-reset", requestResetCode);
 router.post("/verify-password-reset", verifyResetCode);
 router.post("/confirm-password-reset", resetPassword);
-router.post("/create-user-by-teacher", AuthCookieMiddleware, createUserByTeacher);
-router.post("/create-user-by-admin", AuthCookieMiddleware, createUserByAdmin);
+router.post("/create-user-by-teacher", requireAuth, createUserByTeacher);
+router.post("/create-user-by-admin", requireAuth, createUserByAdmin);
 router.get("/get-all-users", getAllUsers);
-router.get("/get-users-same-department", AuthCookieMiddleware, getUsersSameDepartment);
+router.get("/get-users-same-department", requireAuth, getUsersSameDepartment);
 router.get("/get-total-users", getTotalUsers);
-router.delete("/delete-user/:id", AuthCookieMiddleware, deleteUserAccount);
+router.delete("/delete-user/:id", requireAuth, deleteUserAccount);
 router.post("/save-push-token", MobileAuth, savePushToken);
 
 export default router;
