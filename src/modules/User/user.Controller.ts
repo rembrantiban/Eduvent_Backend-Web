@@ -416,6 +416,7 @@ export const loginUser = async (req: Request, res: Response) => {
         department: user.department,
         section: user.section,
         yearLevel: user.yearLevel,
+        isFaceRegistered: user.isFaceRegistered,
       },
       process.env.JWT_SECRET || "defaultsecret",
       { expiresIn: "7d" }
