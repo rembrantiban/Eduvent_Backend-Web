@@ -5,6 +5,8 @@ export interface INotification extends Document {
   message: string;
 
   sender?: mongoose.Types.ObjectId;
+  
+  targetDepartment: string;
 
   data?: {
     screen?: string;
@@ -24,6 +26,12 @@ const NotificationSchema = new Schema<INotification>(
     message: {
       type: String,
       required: true,
+    },
+
+    targetDepartment: {
+      type: String, 
+      required: true,
+      default: "All Deparment"
     },
 
     sender: {

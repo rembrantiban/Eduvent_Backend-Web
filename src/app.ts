@@ -7,6 +7,7 @@ import faceRoutes from "./modules/Face/face.routes"
 import locationRoutes from "./modules/Location/location.routes"
 import departmentRoutes from "./modules/Department/department.routes"
 import attendanceRoutes from "./modules/Attendance/attendance.routes"
+import notificationRoutes from "./modules/Notification/notifacation.routes"
 
 const app = express();
 
@@ -54,5 +55,6 @@ app.use("/api/face", faceRoutes);
 app.use("/api/location", locationRoutes);
 app.use("/api/department", departmentRoutes);
 app.use("/api/attendance", attendanceRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 export default app;
