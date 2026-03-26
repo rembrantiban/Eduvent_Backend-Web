@@ -61,7 +61,7 @@ export class FaceController {
 
       const best = search.results[0];
 
-      if (best.confidence > 80) {
+      if (best.confidence > 90) {
 
         const existingFace = await FaceUser.findOne({
           faceToken: best.face_token

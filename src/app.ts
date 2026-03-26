@@ -12,12 +12,25 @@ import notificationRoutes from "./modules/Notification/notifacation.routes"
 const app = express();
 
 app.set("trust proxy", 1);
+app.get("/api/health", (req, res) => {
+ try {
+    const dbReady = true;
+    res.status(200).json({
+      status: "OK",
+      db: dbReady
+    });
+  } catch {
+    res.status(500).json({ status: "ERROR" });
+  }
+});
+
 app.use(cors(
   {
     origin: (origin, callback) => {
       const allowedOrigins = [
         process.env.CLIENT_URL?.replace(/\/$/, ""), 
-        "http://localhost:5173"
+        "http://localhost:5173",
+         "http://192.168.100.45:8081"
       ];
 
       const normalizedOrigin = origin?.replace(/\/$/, "");

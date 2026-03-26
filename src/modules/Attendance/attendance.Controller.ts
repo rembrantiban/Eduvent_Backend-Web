@@ -64,7 +64,7 @@ export class AttendanceController {
 
       const best = search.results[0];
 
-      if (best.confidence < 80) {
+      if (best.confidence < 90) {
         return res.status(401).json({
           message: "Face does not match registered users"
         });

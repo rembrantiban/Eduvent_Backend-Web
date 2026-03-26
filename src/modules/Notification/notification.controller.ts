@@ -41,6 +41,7 @@ export const createAnnouncement = async (req: Request, res: Response) => {
       body: message,
       data: {
         screen: "Announcements",
+        senderName: `${req.user.firstName} ${req.user.lastName}`,
       },
     }));
 
@@ -99,6 +100,27 @@ export const getAnnouncements = async (req: Request, res: Response) => {
     return res.status(500).json({
       success: false,
       message: "Failed to fetch announcements",
+    });
+  }
+};
+
+export const getAllNotifications = async (req: Request, res: Response) => {
+  try {
+    const notifications = await Notification.find()
+      .populate("sender", "firstName lastName") 
+      .sort({ createdAt: -1 });
+
+    return res.status(200).json({
+      success: true,
+      notifications,
+    });
+
+  } catch (error) {
+    console.error("Error fetching notifications:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch notifications",
     });
   }
 };
