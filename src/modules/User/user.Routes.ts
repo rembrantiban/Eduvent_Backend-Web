@@ -42,7 +42,7 @@ router.get("/get-users-same-department", requireAuth, getUsersSameDepartment);
 router.get("/get-total-users", getTotalUsers);
 router.delete("/delete-user/:id", requireAuth, deleteUserAccount);
 router.post("/save-push-token", MobileAuth, savePushToken);
-router.put("/update-fullname", requireAuth, updateUserFullname);
-router.put("/update-password", requireAuth, uploadImage.single("avatar"), updatePassword);
+router.put("/update-fullname", requireAuth,uploadImage.single("avatar"), updateUserFullname);
+router.put("/update-password", requireAuth, updatePassword);
 
 export default router;  
