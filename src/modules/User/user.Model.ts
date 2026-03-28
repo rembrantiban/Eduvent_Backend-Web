@@ -9,6 +9,7 @@ export interface IUser extends Document {
   password: string;
   role: UserRole;
   isActive: boolean;
+  avatar: string;
 
   //face Register 
 
@@ -37,6 +38,8 @@ const UserSchema: Schema = new Schema<IUser>(
     password: { type: String, required: true },
     role: { type: String, enum: ["admin", "teacher","CSSG_officer", "Saso", "student"], default: "student" },
     isActive: { type: Boolean, default: true },
+    avatar: { type: String, default: null },
+
 
     isFaceRegistered:{ type: Boolean, default: false },
 

@@ -21,7 +21,7 @@ import {
          updateUserFullname,
          updatePassword,
         } from "./user.Controller";
-
+import uploadImage from "../../middleware/multer";
 
 const router = express.Router();
 
@@ -43,6 +43,6 @@ router.get("/get-total-users", getTotalUsers);
 router.delete("/delete-user/:id", requireAuth, deleteUserAccount);
 router.post("/save-push-token", MobileAuth, savePushToken);
 router.put("/update-fullname", requireAuth, updateUserFullname);
-router.put("/update-password", requireAuth, updatePassword);
+router.put("/update-password", requireAuth, uploadImage.single("avatar"), updatePassword);
 
-export default router;
+export default router;  

@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { Event, EventStatus, IEvent } from "./event.Model";
 import cloudinary from "../../config/cloudinary";
-import { calculateEventStatus } from "../../common/utils/eventStatus";
+//import { calculateEventStatus } from "../../common/utils/eventStatus";
 import mongoose from "mongoose";
 import { AnyBulkWriteOperation } from "mongoose";
 

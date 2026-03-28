@@ -5,6 +5,7 @@ import jwt from "jsonwebtoken";
 import validator from "validator";
 import crypto from "crypto";
 import { resend } from "../../common/lib/resend";
+import  cloudinary  from "../../config/cloudinary"
 
 const SALT_ROUNDS = 12;
 
@@ -15,11 +16,6 @@ export const signupUser = async (req: Request, res: Response) => {
     if (!firstName || !lastName || !email || !password || !role) {
       return res.status(400).json({ message: "Please provide all required fields." });
     }
-
-    if (!validator.isEmail(email)) {
-      return res.status(400).json({ message: "Invalid email format." });
-    }
-
 
     if (!validator.isStrongPassword(password, {
       minLength: 6,
@@ -774,19 +770,41 @@ export const updateUserFullname = async (req: Request, res: Response) => {
       });
     }
 
-    const sanitizedFirstName = firstName.trim();
-    const sanitizedLastName = lastName.trim();
+    let avatarUrl: string | undefined;
+
+    if (req.file) {
+      const uploadResult = await new Promise<any>((resolve, reject) => {
+        cloudinary.uploader
+          .upload_stream(
+            {
+              folder: "users",
+              resource_type: "image",
+            },
+            (error, result) => {
+              if (error) reject(error);
+              else resolve(result);
+            }
+          )
+          .end(req.file!.buffer);
+      });
+
+      avatarUrl = uploadResult.secure_url;
+    }
+
+    const updateData: any = {
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+    };
+
+    // ✅ only add avatar if uploaded
+    if (avatarUrl) {
+      updateData.avatar = avatarUrl;
+    }
 
     const updatedUser = await User.findByIdAndUpdate(
       userId,
-      {
-        firstName: sanitizedFirstName,
-        lastName: sanitizedLastName,
-      },
-      {
-        new: true,
-        runValidators: true, 
-      }
+      updateData,
+      { new: true, runValidators: true }
     ).select("-password");
 
     if (!updatedUser) {
@@ -797,17 +815,18 @@ export const updateUserFullname = async (req: Request, res: Response) => {
 
     return res.status(200).json({
       success: true,
-      message: "Full name updated successfully",
+      message: "Profile updated successfully",
       user: updatedUser,
     });
 
   } catch (error) {
-    console.error("Update fullname error:", error);
+    console.error("Update profile error:", error);
     return res.status(500).json({
-      message: "Failed to update fullname",
+      message: "Failed to update profile",
     });
   }
 };
+
 export const updatePassword = async (req: Request, res: Response) => { 
     try{
         const userId = req.user?._id;
