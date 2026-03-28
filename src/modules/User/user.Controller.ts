@@ -6,6 +6,7 @@ import validator from "validator";
 import crypto from "crypto";
 import { resend } from "../../common/lib/resend";
 import  cloudinary  from "../../config/cloudinary"
+import { Department } from "../Department/department.Model";
 
 const SALT_ROUNDS = 12;
 
@@ -357,6 +358,8 @@ export const loginAdmin = async (req: Request, res: Response) => {
         lastName: user.lastName,
         email: user.email,
         role: user.role,
+        department: user.department,
+        avatar: user.avatar
       },
     });
   } catch (err) {
