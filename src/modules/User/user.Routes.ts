@@ -17,7 +17,9 @@ import {
          createUserByAdmin,
          getTotalUsers,
          deleteUserAccount,
-         savePushToken
+         savePushToken,
+         updateUserFullname,
+         updatePassword,
         } from "./user.Controller";
 
 
@@ -40,5 +42,7 @@ router.get("/get-users-same-department", requireAuth, getUsersSameDepartment);
 router.get("/get-total-users", getTotalUsers);
 router.delete("/delete-user/:id", requireAuth, deleteUserAccount);
 router.post("/save-push-token", MobileAuth, savePushToken);
+router.put("/update-fullname", requireAuth, updateUserFullname);
+router.put("/update-password", requireAuth, updatePassword);
 
 export default router;

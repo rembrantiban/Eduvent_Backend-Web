@@ -756,3 +756,85 @@ export const savePushToken = async (req: Request, res: Response) => {
     res.status(500).json({ message: "Failed to save token" });
   }
 };
+
+export const updateUserFullname = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?._id;
+    const { firstName, lastName } = req.body;
+
+    if (!firstName || !lastName) {
+      return res.status(400).json({
+        message: "First name and last name are required",
+      });
+    }
+
+    if (firstName.length < 2 || lastName.length < 2) {
+      return res.status(400).json({
+        message: "Names must be at least 2 characters long",
+      });
+    }
+
+    const sanitizedFirstName = firstName.trim();
+    const sanitizedLastName = lastName.trim();
+
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      {
+        firstName: sanitizedFirstName,
+        lastName: sanitizedLastName,
+      },
+      {
+        new: true,
+        runValidators: true, 
+      }
+    ).select("-password");
+
+    if (!updatedUser) {
+      return res.status(404).json({
+        message: "User not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Full name updated successfully",
+      user: updatedUser,
+    });
+
+  } catch (error) {
+    console.error("Update fullname error:", error);
+    return res.status(500).json({
+      message: "Failed to update fullname",
+    });
+  }
+};
+export const updatePassword = async (req: Request, res: Response) => { 
+    try{
+        const userId = req.user?._id;
+
+        const {  newPassword, confirmPassword } = req.body;
+
+        if (newPassword !== confirmPassword) {
+          return res.status(400).json({ message: "Passwords do not match" });
+        }
+
+        if(!newPassword || !confirmPassword) {
+            return res.status(400).json({ message: "All password fields are required" });
+        }
+
+
+        const hashpassword = await  bcrypt.hash(newPassword, 10);
+        const user = await User.findByIdAndUpdate(userId, { password: hashpassword },{ new: true });
+
+         if(!user){
+         return res.status(404).json({ message: "User not found" });
+      }
+
+      return res.status(200).json({ success: true, message: "Password updated successfully" });
+      }
+      catch(error) {
+      console.error(error);
+      res.status(500).json({ message: "Failed to update password" });
+    }
+
+}
