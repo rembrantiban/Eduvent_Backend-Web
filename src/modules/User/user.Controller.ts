@@ -306,6 +306,128 @@ export const createUserByAdmin = async (
 };
 
 
+export const updateUser = async (req: Request, res: Response) => {
+  try {
+    const currentUser = req.user;
+
+    if (!currentUser || !["admin", "teacher", "Saso"].includes(currentUser.role)) {
+      return res.status(403).json({
+        message: "You are not allowed to update users.",
+      });
+    }
+
+    const { id } = req.params;
+
+    const {
+      firstName,
+      lastName,
+      email,
+      role,
+      department,
+      studentId,
+      yearLevel,
+      section,
+    } = req.body;
+
+    const userToUpdate = await User.findById(id);
+
+    if (!userToUpdate) {
+      return res.status(404).json({
+        message: "User not found.",
+      });
+    }
+
+    if (currentUser.role === "teacher") {
+      // teacher can ONLY update:
+      // - student
+      // - CSSG_officer
+      // - Saso
+      if (!["student", "CSSG_officer", "Saso"].includes(userToUpdate.role)) {
+        return res.status(403).json({
+          message: "Teachers cannot update this user.",
+        });
+      }
+
+      // optional: restrict to same department
+      if (userToUpdate.department !== currentUser.department) {
+        return res.status(403).json({
+          message: "You can only update users in your department.",
+        });
+      }
+    }
+
+    if (currentUser.role === "Saso") {
+      // Saso cannot update admin
+      if (userToUpdate.role === "admin") {
+        return res.status(403).json({
+          message: "Saso cannot update admin.",
+        });
+      }
+    }
+
+    // ✅ EMAIL UNIQUE CHECK
+    const emailExists = await User.findOne({
+      email,
+      _id: { $ne: id },
+    });
+
+    if (emailExists) {
+      return res.status(400).json({
+        message: "Email already in use.",
+      });
+    }
+
+    // ✅ STUDENT VALIDATION
+    if (role === "student") {
+      if (!studentId || !yearLevel || !section) {
+        return res.status(400).json({
+          message: "Missing student fields.",
+        });
+      }
+
+      const existingStudent = await User.findOne({
+        studentId,
+        _id: { $ne: id },
+      });
+
+      if (existingStudent) {
+        return res.status(400).json({
+          message: "Student ID already exists.",
+        });
+      }
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      id,
+      {
+        firstName: firstName?.trim(),
+        lastName: lastName?.trim(),
+        email,
+        role,
+        department,
+        ...(role === "student" && {
+          studentId,
+          yearLevel,
+          section,
+        }),
+      },
+      { new: true, runValidators: true }
+    ).select("-password");
+
+    return res.status(200).json({
+      success: true,
+      message: "User updated successfully",
+      user: updatedUser,
+    });
+
+  } catch (error) {
+    console.error("Update user error:", error);
+    return res.status(500).json({
+      message: "Server error",
+    });
+  }
+};
+
 export const loginAdmin = async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
