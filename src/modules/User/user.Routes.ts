@@ -20,6 +20,7 @@ import {
          savePushToken,
          updateUserFullname,
          updatePassword,
+         updateUserProfileForStudent,
         } from "./user.Controller";
 import uploadImage from "../../middleware/multer";
 
@@ -44,5 +45,6 @@ router.delete("/delete-user/:id", requireAuth, deleteUserAccount);
 router.post("/save-push-token", MobileAuth, savePushToken);
 router.put("/update-fullname", requireAuth,uploadImage.single("avatar"), updateUserFullname);
 router.put("/update-password", requireAuth, updatePassword);
+router.put("/update-profile-for-student", requireAuth, uploadImage.single("avatar"), updateUserProfileForStudent);
 
 export default router;  

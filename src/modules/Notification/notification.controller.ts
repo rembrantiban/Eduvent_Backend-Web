@@ -107,7 +107,7 @@ export const getAnnouncements = async (req: Request, res: Response) => {
 export const getAllNotifications = async (req: Request, res: Response) => {
   try {
     const notifications = await Notification.find()
-      .populate("sender", "firstName lastName") 
+      .populate("sender", "firstName lastName avatar") 
       .sort({ createdAt: -1 });
 
     return res.status(200).json({

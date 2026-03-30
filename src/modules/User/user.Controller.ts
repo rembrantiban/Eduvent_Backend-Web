@@ -416,6 +416,7 @@ export const loginUser = async (req: Request, res: Response) => {
         section: user.section,
         yearLevel: user.yearLevel,
         isFaceRegistered: user.isFaceRegistered,
+        avatar: user.avatar
       },
       process.env.JWT_SECRET || "defaultsecret",
       { expiresIn: "7d" }
@@ -434,6 +435,7 @@ export const loginUser = async (req: Request, res: Response) => {
         department: user.department,
         section: user.section,
         profileCompleted: isProfileComplete,
+        avatar: user.avatar,
       },
       token,
     });
@@ -483,6 +485,85 @@ export const completeProfile = async (req: Request, res: Response) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
+
+
+export const updateUserProfileForStudent = async (req: Request, res: Response) => {
+   try {
+    const userId = req.user?._id;
+    const { firstName, lastName, yearLevel, department, section } = req.body;
+
+    if (!firstName || !lastName || !yearLevel || !department || !section) {
+      return res.status(400).json({
+        message: "All fields are required",
+      });
+    }
+
+    if (firstName.length < 2 || lastName.length < 2) {
+      return res.status(400).json({
+        message: "Names must be at least 2 characters long",
+      });
+    }
+
+    let avatarUrl: string | undefined;
+
+    if (req.file) {
+      const uploadResult = await new Promise<any>((resolve, reject) => {
+        cloudinary.uploader
+          .upload_stream(
+            {
+              folder: "users",
+              resource_type: "image",
+            },
+            (error, result) => {
+              if (error) reject(error);
+              else resolve(result);
+            }
+          )
+          .end(req.file!.buffer);
+      });
+
+      avatarUrl = uploadResult.secure_url;
+    }
+
+    const updateData: any = {
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      yearLevel: yearLevel.trim(),
+      department: department.trim(),
+      section: section.trim()
+    };
+
+    // ✅ only add avatar if uploaded
+    if (avatarUrl) {
+      updateData.avatar = avatarUrl;
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      updateData,
+      { new: true, runValidators: true }
+    ).select("-password");
+
+    if (!updatedUser) {
+      return res.status(404).json({
+        message: "User not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Profile updated successfully",
+      user: updatedUser,
+    });
+
+  } catch (error) {
+    console.error("Update profile error:", error);
+    return res.status(500).json({
+      message: "Failed to update profile",
+    });
+  }
+
+}
 
 export const requestResetCode = async (req: Request, res: Response) => {
   try {
@@ -684,7 +765,7 @@ export const getAllUsers = async (req: Request, res: Response) => {
         department: user.department,
         studentId: user.studentId,
         yearLevel: user.yearLevel,
-
+        avatar: user.avatar,
         dateAdded: user.createdAt
           ? new Intl.DateTimeFormat("en-US", {
             year: "numeric",
