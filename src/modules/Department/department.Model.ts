@@ -3,6 +3,7 @@ import mongoose, { Schema, Document } from "mongoose";
 export interface IDepartment extends Document {
   name: string;
   code: string;
+  description: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -23,6 +24,11 @@ const DepartmentSchema = new Schema<IDepartment>(
       uppercase: true,
       unique: true,
     },
+    description: {
+      type: String,
+      required: true,
+      trim: true,
+    }
   },
   { timestamps: true } 
 );

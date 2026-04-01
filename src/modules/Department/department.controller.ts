@@ -3,11 +3,11 @@ import { Department } from "./department.Model";
 
 export const createDepartment = async (req: Request, res: Response) => {
   try {
-    const { name, code } = req.body;
+    const { name, code, description } = req.body;
 
-    if (!name || !code) {
+    if (!name || !code || !description) {
       return res.status(400).json({
-        message: "Department name and code are required",
+        message: "Department name, code, and description are required",
       });
     }
 
@@ -24,6 +24,7 @@ export const createDepartment = async (req: Request, res: Response) => {
     const department = await Department.create({
       name,
       code,
+      description
     });
 
     return res.status(201).json({
@@ -56,11 +57,11 @@ export const getDepartments = async (_req: Request, res: Response) => {
 export const updateDepartment = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { name, code } = req.body;
+    const { name, code, description } = req.body;
 
     const department = await Department.findByIdAndUpdate(
       id,
-      { name, code },
+      { name, code, description },
       { new: true }
     );
 
