@@ -874,7 +874,27 @@ export const getUsersSameDepartment = async (
 
 export const getAllUsers = async (req: Request, res: Response) => {
   try {
-    const users = await User.find({ role: { $ne: "admin" } }).select("-password");
+    const currentUserRole = req.user?.role;
+     
+      let roleFilter: any = {};
+
+      if (currentUserRole === "admin") {
+        roleFilter = { role: { $in: ["student", "CSSG_officer", "teacher", "Saso"] } };
+      } else if (currentUserRole === "teacher") {
+        roleFilter = { role: { $in: ["student", "teacher", "CSSG_officer"] } };
+      }
+      else if (currentUserRole === "CSSG_officer") {
+        roleFilter = { role: { $in: ["student"] } };
+      }
+      else if (currentUserRole === "Saso") {
+        roleFilter = { role: { $in: ["student", "CSSG_officer", "teacher", "Saso"] } };
+      }
+
+      else{
+          return res.status(403).json({ message: "Unauthorized" });
+      }
+
+      const users = await User.find(roleFilter).select("-password");
 
     return res.json(
       users.map((user) => ({

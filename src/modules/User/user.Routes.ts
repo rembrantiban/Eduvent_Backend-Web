@@ -40,7 +40,7 @@ router.post("/verify-password-reset", verifyResetCode);
 router.post("/confirm-password-reset", resetPassword);
 router.post("/create-user-by-teacher", requireAuth, createUserByTeacher);
 router.post("/create-user-by-admin", requireAuth, createUserByAdmin);
-router.get("/get-all-users", getAllUsers);
+router.get("/get-all-users", requireAuth, getAllUsers);
 router.get("/get-users-same-department", requireAuth, getUsersSameDepartment);
 router.get("/get-total-users", getTotalUsers);
 router.delete("/delete-user/:id", requireAuth, deleteUserAccount);
