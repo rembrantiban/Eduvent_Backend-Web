@@ -813,7 +813,9 @@ export const checkUserAuth = async (req: Request, res: Response) => {
         role: req.user.role,
         studentId: req.user.studentId,
         yearLevel: req.user.yearLevel,
+        section: req.user.section,
         department: req.user.department,
+        avatar: req.user.avatar,
       },
     });
 
