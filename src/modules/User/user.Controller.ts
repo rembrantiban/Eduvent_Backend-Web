@@ -101,7 +101,7 @@ export const createUserByTeacher = async (
   res: Response
 ) => {
   try {
-    if (!req.user || req.user.role !== "teacher") {
+    if (!req.user || req.user.role !== "CSSG_Adviser") {
       return res.status(403).json({
         message: "Only teachers can create users.",
       });
@@ -155,7 +155,7 @@ export const createUserByTeacher = async (
     }
 
 
-    if (!req.user || req.user.role !== "teacher") {
+    if (!req.user || req.user.role !== "CSSG_Adviser") {
       return res.status(403).json({ message: "Forbidden" });
     }
 
@@ -337,14 +337,14 @@ export const updateUser = async (req: Request, res: Response) => {
       });
     }
 
-    if (currentUser.role === "teacher") {
-      // teacher can ONLY update:
+    if (currentUser.role === "CSSG_Adviser") {
+      // CSSG_Adviser can ONLY update:
       // - student
       // - CSSG_officer
       // - Saso
       if (!["student", "CSSG_officer", "Saso"].includes(userToUpdate.role)) {
         return res.status(403).json({
-          message: "Teachers cannot update this user.",
+          message: "CSSG_Adviser cannot update this user.",
         });
       }
 
@@ -881,15 +881,15 @@ export const getAllUsers = async (req: Request, res: Response) => {
       let roleFilter: any = {};
 
       if (currentUserRole === "admin") {
-        roleFilter = { role: { $in: ["student", "CSSG_officer", "teacher", "Saso"] } };
-      } else if (currentUserRole === "teacher") {
-        roleFilter = { role: { $in: ["student", "teacher", "CSSG_officer"] } };
+        roleFilter = { role: { $in: ["student", "CSSG_officer", "CSSG_Adviser", "Saso"] } };
+      } else if (currentUserRole === "CSSG_Adviser") {
+        roleFilter = { role: { $in: ["student", "CSSG_officer"] } };
       }
       else if (currentUserRole === "CSSG_officer") {
         roleFilter = { role: { $in: ["student"] } };
       }
       else if (currentUserRole === "Saso") {
-        roleFilter = { role: { $in: ["student", "CSSG_officer", "teacher", "Saso"] } };
+        roleFilter = { role: { $in: ["student", "CSSG_officer", "CSSG_Adviser", "Saso"] } };
       }
 
       else{

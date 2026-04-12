@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document } from "mongoose";
 
-export type UserRole = "admin" | "teacher" | "student" | "CSSG_officer" | "Saso";
+export type UserRole = "admin" | "CSSG_Adviser" | "student" | "CSSG_officer" | "Saso";
 
 export interface IUser extends Document {
   firstName: string;
