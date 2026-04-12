@@ -29,7 +29,7 @@ app.use(cors(
     origin: (origin, callback) => {
       const allowedOrigins = [
         process.env.CLIENT_URL?.replace(/\/$/, ""), 
-        "http://localhost:5173",
+        "http://localhost:5174",
          "http://192.168.100.45:8081"
       ];
 

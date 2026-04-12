@@ -5,7 +5,7 @@ import jwt from "jsonwebtoken";
 import validator from "validator";
 import crypto from "crypto";
 import { resend } from "../../common/lib/resend";
-import  cloudinary  from "../../config/cloudinary"
+import cloudinary from "../../config/cloudinary"
 import { Department } from "../Department/department.Model";
 
 const SALT_ROUNDS = 12;
@@ -439,7 +439,7 @@ export const loginAdmin = async (req: Request, res: Response) => {
 
     const user = await User.findOne({
       email: email,
-      role: { $in: ["admin", "teacher", "Saso", "CSSG_officer"] },
+      role: { $in: ["admin", "CSSG_Adviser", "Saso", "CSSG_officer"] },
     }).select("+password");
 
     if (!user) {
@@ -462,13 +462,15 @@ export const loginAdmin = async (req: Request, res: Response) => {
       { expiresIn: "7d" }
     );
 
+    const isProduction = process.env.NODE_ENV === "production";
+
     // ✅ SET COOKIE
     res.cookie("user_token", token, {
       httpOnly: true,
-      secure: true,        // true in production (HTTPS)
-      sameSite: "none",      // use "none" + secure:true if cross-site HTTPS
+      secure: isProduction, // ✅ only true in production
+      sameSite: isProduction ? "none" : "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-      path:"/"
+      path: "/"
     });
 
     return res.status(200).json({
@@ -610,7 +612,7 @@ export const completeProfile = async (req: Request, res: Response) => {
 
 
 export const updateUserProfileForStudent = async (req: Request, res: Response) => {
-   try {
+  try {
     const userId = req.user?._id;
     const { firstName, lastName, yearLevel, department, section } = req.body;
 
@@ -877,26 +879,26 @@ export const getUsersSameDepartment = async (
 export const getAllUsers = async (req: Request, res: Response) => {
   try {
     const currentUserRole = req.user?.role;
-     
-      let roleFilter: any = {};
 
-      if (currentUserRole === "admin") {
-        roleFilter = { role: { $in: ["student", "CSSG_officer", "CSSG_Adviser", "Saso"] } };
-      } else if (currentUserRole === "CSSG_Adviser") {
-        roleFilter = { role: { $in: ["student", "CSSG_officer"] } };
-      }
-      else if (currentUserRole === "CSSG_officer") {
-        roleFilter = { role: { $in: ["student"] } };
-      }
-      else if (currentUserRole === "Saso") {
-        roleFilter = { role: { $in: ["student", "CSSG_officer", "CSSG_Adviser", "Saso"] } };
-      }
+    let roleFilter: any = {};
 
-      else{
-          return res.status(403).json({ message: "Unauthorized" });
-      }
+    if (currentUserRole === "admin") {
+      roleFilter = { role: { $in: ["student", "CSSG_officer", "CSSG_Adviser", "Saso"] } };
+    } else if (currentUserRole === "CSSG_Adviser") {
+      roleFilter = { role: { $in: ["student", "CSSG_officer"] } };
+    }
+    else if (currentUserRole === "CSSG_officer") {
+      roleFilter = { role: { $in: ["student"] } };
+    }
+    else if (currentUserRole === "Saso") {
+      roleFilter = { role: { $in: ["student", "CSSG_officer", "CSSG_Adviser", "Saso"] } };
+    }
 
-      const users = await User.find(roleFilter).select("-password");
+    else {
+      return res.status(403).json({ message: "Unauthorized" });
+    }
+
+    const users = await User.find(roleFilter).select("-password");
 
     return res.json(
       users.map((user) => ({
@@ -934,7 +936,7 @@ export const getAllUsers = async (req: Request, res: Response) => {
 };
 
 
-export const getTotalUsers = async(req: Request, res: Response) => {
+export const getTotalUsers = async (req: Request, res: Response) => {
   try {
     const totalUsers = await User.countDocuments({ role: { $ne: "admin" } });
     return res.json({ totalUsers });
@@ -945,21 +947,21 @@ export const getTotalUsers = async(req: Request, res: Response) => {
 };
 
 
-export const deleteUserAccount = async(req:Request, res: Response) => {
-     try{
-        const { id } = req.params;
-        const deleteUser = await User.findByIdAndDelete(id);
+export const deleteUserAccount = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const deleteUser = await User.findByIdAndDelete(id);
 
-        if(!deleteUser){
-           return res.status(404).json({ success: false, message: "User not found"});
-        }
+    if (!deleteUser) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
 
-        return res.status(200).json({ success:true, deleteUser: deleteUser})
-     }
-     catch(error){
-        console.error("Internal Server Error", error)
-        return res.status(500).json({ success: false, message: "Something went wrong"})
-     }
+    return res.status(200).json({ success: true, deleteUser: deleteUser })
+  }
+  catch (error) {
+    console.error("Internal Server Error", error)
+    return res.status(500).json({ success: false, message: "Something went wrong" })
+  }
 }
 
 
@@ -1055,33 +1057,33 @@ export const updateUserFullname = async (req: Request, res: Response) => {
   }
 };
 
-export const updatePassword = async (req: Request, res: Response) => { 
-    try{
-        const userId = req.user?._id;
+export const updatePassword = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?._id;
 
-        const {  newPassword, confirmPassword } = req.body;
+    const { newPassword, confirmPassword } = req.body;
 
-        if (newPassword !== confirmPassword) {
-          return res.status(400).json({ message: "Passwords do not match" });
-        }
-
-        if(!newPassword || !confirmPassword) {
-            return res.status(400).json({ message: "All password fields are required" });
-        }
-
-
-        const hashpassword = await  bcrypt.hash(newPassword, 10);
-        const user = await User.findByIdAndUpdate(userId, { password: hashpassword },{ new: true });
-
-         if(!user){
-         return res.status(404).json({ message: "User not found" });
-      }
-
-      return res.status(200).json({ success: true, message: "Password updated successfully" });
-      }
-      catch(error) {
-      console.error(error);
-      res.status(500).json({ message: "Failed to update password" });
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({ message: "Passwords do not match" });
     }
+
+    if (!newPassword || !confirmPassword) {
+      return res.status(400).json({ message: "All password fields are required" });
+    }
+
+
+    const hashpassword = await bcrypt.hash(newPassword, 10);
+    const user = await User.findByIdAndUpdate(userId, { password: hashpassword }, { new: true });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    return res.status(200).json({ success: true, message: "Password updated successfully" });
+  }
+  catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Failed to update password" });
+  }
 
 }
