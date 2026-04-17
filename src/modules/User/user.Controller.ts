@@ -339,25 +339,6 @@ export const updateUser = async (req: Request, res: Response) => {
 
     const isStudentRole = ["student", "CSSG_officer"].includes(role);
 
-      if (isStudentRole) {
-        if (!studentId || !yearLevel || !section) {
-          return res.status(400).json({
-            message: "Missing student fields.",
-          });
-        }
-
-        const existingStudent = await User.findOne({
-          studentId,
-          _id: { $ne: id },
-        });
-
-        if (existingStudent) {
-          return res.status(400).json({
-            message: "Student ID already exists.",
-          });
-        }
-      }
-
     if (currentUser.role === "CSSG_Adviser") {
       if (!["student", "CSSG_officer", "Saso"].includes(userToUpdate.role)) {
         return res.status(403).json({
@@ -365,7 +346,6 @@ export const updateUser = async (req: Request, res: Response) => {
         });
       }
 
-      // optional: restrict to same department
       if (userToUpdate.department !== currentUser.department) {
         return res.status(403).json({
           message: "You can only update users in your department.",
@@ -374,7 +354,6 @@ export const updateUser = async (req: Request, res: Response) => {
     }
 
     if (currentUser.role === "Saso") {
-      // Saso cannot update admin
       if (userToUpdate.role === "admin") {
         return res.status(403).json({
           message: "Saso cannot update admin.",
@@ -382,20 +361,20 @@ export const updateUser = async (req: Request, res: Response) => {
       }
     }
 
-    // ✅ EMAIL UNIQUE CHECK
-    const emailExists = await User.findOne({
-      email,
-      _id: { $ne: id },
-    });
-
-    if (emailExists) {
-      return res.status(400).json({
-        message: "Email already in use.",
+    if (email) {
+      const emailExists = await User.findOne({
+        email,
+        _id: { $ne: id },
       });
+
+      if (emailExists) {
+        return res.status(400).json({
+          message: "Email already in use.",
+        });
+      }
     }
 
-    // ✅ STUDENT VALIDATION
-    if (role === "student") {
+    if (isStudentRole) {
       if (!studentId || !yearLevel || !section) {
         return res.status(400).json({
           message: "Missing student fields.",
@@ -422,16 +401,23 @@ export const updateUser = async (req: Request, res: Response) => {
       department,
     };
 
-    if (role === "student") {
-    updateData.studentId = studentId;
-    updateData.yearLevel = yearLevel;
-    updateData.section = section;
-  }
+    if (isStudentRole) {
+      updateData.studentId = studentId;
+      updateData.yearLevel = yearLevel;
+      updateData.section = section;
+    }
 
+  
     if (password) {
       if (password.length < 6) {
         return res.status(400).json({
           message: "Password must be at least 6 characters",
+        });
+      }
+
+      if (currentUser.role !== "admin" && currentUser._id.toString() !== id) {
+        return res.status(403).json({
+          message: "You cannot change this password",
         });
       }
 
@@ -451,10 +437,11 @@ export const updateUser = async (req: Request, res: Response) => {
       user: updatedUser,
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error("Update user error:", error);
+
     return res.status(500).json({
-      message: "Server error",
+      message: error.message, 
     });
   }
 };
