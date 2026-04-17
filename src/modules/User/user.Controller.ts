@@ -337,11 +337,28 @@ export const updateUser = async (req: Request, res: Response) => {
       });
     }
 
+    const isStudentRole = ["student", "CSSG_officer"].includes(role);
+
+      if (isStudentRole) {
+        if (!studentId || !yearLevel || !section) {
+          return res.status(400).json({
+            message: "Missing student fields.",
+          });
+        }
+
+        const existingStudent = await User.findOne({
+          studentId,
+          _id: { $ne: id },
+        });
+
+        if (existingStudent) {
+          return res.status(400).json({
+            message: "Student ID already exists.",
+          });
+        }
+      }
+
     if (currentUser.role === "CSSG_Adviser") {
-      // CSSG_Adviser can ONLY update:
-      // - student
-      // - CSSG_officer
-      // - Saso
       if (!["student", "CSSG_officer", "Saso"].includes(userToUpdate.role)) {
         return res.status(403).json({
           message: "CSSG_Adviser cannot update this user.",
@@ -905,7 +922,7 @@ export const getAllUsers = async (req: Request, res: Response) => {
       roleFilter = { role: { $in: ["student"] } };
     }
     else if (currentUserRole === "Saso") {
-      roleFilter = { role: { $in: ["student", "CSSG_officer", "CSSG_Adviser", "Saso"] } };
+      roleFilter = { role: { $in: ["student", "CSSG_officer", "CSSG_Adviser"] } };
     }
 
     else {
@@ -1110,6 +1127,9 @@ export const updateUserRole = async (req: any, res: any) => {
     const { role } = req.body;
 
     const VALID_ROLES = ["admin", "Saso", "CSSG_Adviser", "CSSG_officer", "student"];
+
+
+    
 
     // ✅ Validate role
     if (!VALID_ROLES.includes(role)) {
