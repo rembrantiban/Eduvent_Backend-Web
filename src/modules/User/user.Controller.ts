@@ -6,8 +6,7 @@ import validator from "validator";
 import crypto from "crypto";
 import { resend } from "../../common/lib/resend";
 import cloudinary from "../../config/cloudinary"
-import { Department } from "../Department/department.Model";
-
+import  canAssignRole  from "../../common/utils/roles"
 const SALT_ROUNDS = 12;
 
 export const signupUser = async (req: Request, res: Response) => {
@@ -1087,3 +1086,50 @@ export const updatePassword = async (req: Request, res: Response) => {
   }
 
 }
+
+
+export const updateUserRole = async (req: any, res: any) => {
+  try {
+    const currentUser = req.user;
+    const userId = req.params.id;
+    const { role } = req.body;
+
+    const VALID_ROLES = ["admin", "Saso", "CSSG_Adviser", "CSSG_officer", "student"];
+
+    // ✅ Validate role
+    if (!VALID_ROLES.includes(role)) {
+      return res.status(400).json({ message: "Invalid role" });
+    }
+
+    const userToUpdate = await User.findById(userId);
+
+    if (!userToUpdate) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // 🔐 Permission check
+    if (!canAssignRole(currentUser, role)) {
+      return res.status(403).json({
+        message: "You cannot assign this role",
+      });
+    }
+
+    // 🔐 Optional: prevent changing higher roles
+    if (userToUpdate.role === "admin" && currentUser.role !== "admin") {
+      return res.status(403).json({
+        message: "Cannot modify admin",
+      });
+    }
+
+    userToUpdate.role = role;
+    await userToUpdate.save();
+
+    res.json({
+      message: "Role updated successfully",
+      user: userToUpdate,
+    });
+
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
+  }
+};
