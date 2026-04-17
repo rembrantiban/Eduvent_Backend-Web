@@ -403,12 +403,13 @@ export const updateUser = async (req: Request, res: Response) => {
       email,
       role,
       department,
-      ...(role === "student" && {
-        studentId,
-        yearLevel,
-        section,
-      }),
     };
+
+    if (role === "student") {
+    updateData.studentId = studentId;
+    updateData.yearLevel = yearLevel;
+    updateData.section = section;
+  }
 
     if (password) {
       if (password.length < 6) {
