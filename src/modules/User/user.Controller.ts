@@ -309,7 +309,7 @@ export const updateUser = async (req: Request, res: Response) => {
   try {
     const currentUser = req.user;
 
-    if (!currentUser || !["admin", "teacher", "Saso"].includes(currentUser.role)) {
+    if (!currentUser || !["admin", "CSSG_Adviser", "Saso"].includes(currentUser.role)) {
       return res.status(403).json({
         message: "You are not allowed to update users.",
       });
@@ -326,6 +326,7 @@ export const updateUser = async (req: Request, res: Response) => {
       studentId,
       yearLevel,
       section,
+      password,
     } = req.body;
 
     const userToUpdate = await User.findById(id);
@@ -396,20 +397,33 @@ export const updateUser = async (req: Request, res: Response) => {
       }
     }
 
+    const updateData: any = {
+      firstName: firstName?.trim(),
+      lastName: lastName?.trim(),
+      email,
+      role,
+      department,
+      ...(role === "student" && {
+        studentId,
+        yearLevel,
+        section,
+      }),
+    };
+
+    if (password) {
+      if (password.length < 6) {
+        return res.status(400).json({
+          message: "Password must be at least 6 characters",
+        });
+      }
+
+      const salt = await bcrypt.genSalt(10);
+      updateData.password = await bcrypt.hash(password, salt);
+    }
+
     const updatedUser = await User.findByIdAndUpdate(
       id,
-      {
-        firstName: firstName?.trim(),
-        lastName: lastName?.trim(),
-        email,
-        role,
-        department,
-        ...(role === "student" && {
-          studentId,
-          yearLevel,
-          section,
-        }),
-      },
+      updateData,
       { new: true, runValidators: true }
     ).select("-password");
 
