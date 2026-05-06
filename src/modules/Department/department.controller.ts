@@ -1,13 +1,17 @@
 import { Request, Response } from "express";
 import { Department } from "./department.Model";
 
-export const createDepartment = async (req: Request, res: Response) => {
+/* CREATE DEPARTMENT */
+export const createDepartment = async (
+  req: Request,
+  res: Response
+) => {
   try {
-    const { name, code, description } = req.body;
+    const { code, name, description, majors } = req.body;
 
-    if (!name || !code || !description) {
+    if (!code || !name || !description) {
       return res.status(400).json({
-        message: "Department name, code, and description are required",
+        message: "Code, name, and description are required",
       });
     }
 
@@ -21,10 +25,40 @@ export const createDepartment = async (req: Request, res: Response) => {
       });
     }
 
+    if (majors && majors.length > 0) {
+      const majorNames = majors.map((m: any) =>
+        m.name.trim().toLowerCase()
+      );
+
+      const duplicateMajors = majorNames.filter(
+        (item: string, index: number) =>
+          majorNames.indexOf(item) !== index
+      );
+
+      if (duplicateMajors.length > 0) {
+        return res.status(400).json({
+          message: "Duplicate majors are not allowed",
+        });
+      }
+
+      const existingMajor = await Department.findOne({
+        "majors.name": {
+          $in: majors.map((m: any) => m.name),
+        },
+      });
+
+      if (existingMajor) {
+        return res.status(409).json({
+          message: "One or more majors already exist",
+        });
+      }
+    }
+
     const department = await Department.create({
-      name,
       code,
-      description
+      name,
+      description,
+      majors: majors || [],
     });
 
     return res.status(201).json({
@@ -33,35 +67,71 @@ export const createDepartment = async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error(error);
+
     return res.status(500).json({
       message: "Server error",
     });
   }
 };
 
-/* GET ALL DEPARTMENTS */
-export const getDepartments = async (_req: Request, res: Response) => {
+export const getDepartments = async (
+  _req: Request,
+  res: Response
+) => {
   try {
-    const departments = await Department.find().sort({ createdAt: -1 });
+    const departments = await Department.find().sort({
+      createdAt: -1,
+    });
 
     return res.json(departments);
   } catch (error) {
     console.error(error);
+
     return res.status(500).json({
       message: "Server error",
     });
   }
 };
 
-/* UPDATE DEPARTMENT */
-export const updateDepartment = async (req: Request, res: Response) => {
+export const updateDepartment = async (
+  req: Request,
+  res: Response
+) => {
   try {
     const { id } = req.params;
-    const { name, code, description } = req.body;
+
+    const {
+      code,
+      name,
+      description,
+      majors,
+    } = req.body;
+
+    if (majors && majors.length > 0) {
+      const majorNames = majors.map((m: any) =>
+        m.name.trim().toLowerCase()
+      );
+
+      const duplicateMajors = majorNames.filter(
+        (item: string, index: number) =>
+          majorNames.indexOf(item) !== index
+      );
+
+      if (duplicateMajors.length > 0) {
+        return res.status(400).json({
+          message: "Duplicate majors are not allowed",
+        });
+      }
+    }
 
     const department = await Department.findByIdAndUpdate(
       id,
-      { name, code, description },
+      {
+        code,
+        name,
+        description,
+        majors,
+      },
       { new: true }
     );
 
@@ -72,19 +142,22 @@ export const updateDepartment = async (req: Request, res: Response) => {
     }
 
     return res.json({
-      message: "Department updated",
+      message: "Department updated successfully",
       department,
     });
   } catch (error) {
     console.error(error);
+
     return res.status(500).json({
       message: "Server error",
     });
   }
 };
 
-/* DELETE DEPARTMENT */
-export const deleteDepartment = async (req: Request, res: Response) => {
+export const deleteDepartment = async (
+  req: Request,
+  res: Response
+) => {
   try {
     const { id } = req.params;
 
@@ -101,6 +174,7 @@ export const deleteDepartment = async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error(error);
+
     return res.status(500).json({
       message: "Server error",
     });

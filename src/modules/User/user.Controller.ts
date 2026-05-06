@@ -32,7 +32,7 @@ export const signupUser = async (req: Request, res: Response) => {
         return res.status(400).json({ message: "Student ID, first name, last name, and password are required for students." });
       }
     }
-    if (role === "student" || role === "CSSG_officer") {
+    if (role === "CSSG_officer") {
       if (!studentId || !yearLevel || !department || !section) {
         return res.status(400).json({
           message: "All student fields are required for this role."
