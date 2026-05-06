@@ -3,7 +3,7 @@
     "rootDir": "./src",
     "outDir": "./dist",
     "module": "commonjs",
-    "moduleResolution": "node10",
+    "moduleResolution": "bundler",
     "target": "ES2020",
     "strict": true,
     "esModuleInterop": true,
