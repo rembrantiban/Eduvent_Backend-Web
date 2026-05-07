@@ -11,7 +11,7 @@ const SALT_ROUNDS = 12;
 
 export const signupUser = async (req: Request, res: Response) => {
   try {
-    const { firstName, lastName, email, password, role, studentId, yearLevel, department, section } = req.body;
+    const { firstName, lastName, email, password, role, studentId, yearLevel, major, department, section } = req.body;
 
     if (!firstName || !lastName || !email || !password || !role) {
       return res.status(400).json({ message: "Please provide all required fields." });
@@ -69,6 +69,7 @@ export const signupUser = async (req: Request, res: Response) => {
     if (role === "student" || role === "CSSG_officer") {
       newUser.studentId = studentId;
       newUser.yearLevel = yearLevel;
+      newUser.major = major;
       newUser.department = department;
       newUser.section = section;
     }
@@ -92,6 +93,7 @@ export const signupUser = async (req: Request, res: Response) => {
         studentId: createdUser.studentId,
         yearLevel: createdUser.yearLevel,
         department: createdUser.department,
+        major: createdUser.major,
         section: createdUser.section,
       },
       token,
@@ -121,6 +123,7 @@ export const createUserByTeacher = async (
       password,
       role,
       studentId,
+      major,
       yearLevel,
       section,
     } = req.body;
@@ -176,11 +179,12 @@ export const createUserByTeacher = async (
       email,
       password: hashedPassword,
       role,
-      department, // 🔥 automatically same as teacher
+      department,
       ...(role === "student" && {
         studentId,
         yearLevel,
         section,
+        major,
       }),
     });
 
@@ -193,6 +197,7 @@ export const createUserByTeacher = async (
         email: newUser.email,
         role: newUser.role,
         department: newUser.department,
+        major: newUser.major,
       },
     });
 

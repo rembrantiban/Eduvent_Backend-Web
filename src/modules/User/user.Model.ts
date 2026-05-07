@@ -10,7 +10,6 @@ export interface IUser extends Document {
   role: UserRole;
   isActive: boolean;
   avatar: string;
-
   //face Register 
 
   isFaceRegistered: boolean,
@@ -21,6 +20,7 @@ export interface IUser extends Document {
   studentId?: string;
   yearLevel?: string;
   department?: string;
+  major: string;
   section?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -58,6 +58,7 @@ const UserSchema: Schema = new Schema<IUser>(
     studentId: { type: String, unique: true, sparse: true },
     yearLevel: { type: String },
     department: { type: String },
+    major: { type: String },
     section: { type: String },
   },
   { timestamps: true }
