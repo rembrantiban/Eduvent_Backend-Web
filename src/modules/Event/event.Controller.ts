@@ -4,10 +4,31 @@ import cloudinary from "../../config/cloudinary";
 import mongoose from "mongoose";
 import { AnyBulkWriteOperation } from "mongoose";
 
+
 export const createEvent = async (
   req: Request,
   res: Response
 ) => {
+  const parsedTargetDepartments =
+    typeof req.body.targetDepartments === "string"
+      ? JSON.parse(req.body.targetDepartments)
+      : [];
+
+  const parsedTargetMajors =
+    typeof req.body.targetMajors === "string"
+      ? JSON.parse(req.body.targetMajors)
+      : [];
+
+  const parsedTargetYearLevels =
+    typeof req.body.targetYearLevels === "string"
+      ? JSON.parse(req.body.targetYearLevels)
+      : [];
+
+  const parsedTargetSections =
+    typeof req.body.targetSections === "string"
+      ? JSON.parse(req.body.targetSections)
+      : [];
+
   try {
     const {
       title,
@@ -154,19 +175,19 @@ export const createEvent = async (
 
       /* NEW TARGETING */
       targetDepartments:
-        targetDepartments || [],
+        parsedTargetDepartments,
 
       targetYearLevels:
-        targetYearLevels || [],
+        parsedTargetYearLevels,
 
       targetMajors:
-        targetMajors || [],
+        parsedTargetMajors,
 
       targetSections:
-        targetSections || [],
+        parsedTargetSections,
 
       isForAllStudents:
-        isForAllStudents || false,
+        isForAllStudents === "true",
     });
 
     const savedEvent =
@@ -218,7 +239,7 @@ export const getEvents = async (req: Request, res: Response) => {
       } else {
         endH = startH + 1;
         endM = startM;
-}
+      }
 
       const eventStart = new Date(
         event.date.getFullYear(),
@@ -282,10 +303,99 @@ export const getEvents = async (req: Request, res: Response) => {
   }
 };
 
+export const getStudentEvents = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const user = req.user;
+
+    if (!user) {
+      return res.status(401).json({
+        message: "Unauthorized",
+      });
+    }
+
+    const events = await Event.find({
+      $or: [
+        {
+          isForAllStudents: true,
+        },
+
+        {
+          targetDepartments: {
+            $in: [user.department],
+          },
+        },
+
+        /* MAJOR */
+        {
+          targetMajors: {
+            $in: [user.major],
+          },
+        },
+
+        /* YEAR LEVEL */
+        {
+          targetYearLevels: {
+            $in: [user.yearLevel],
+          },
+        },
+
+        /* SECTION */
+        {
+          targetSections: {
+            $in: [user.section],
+          },
+        },
+      ],
+    })
+      .populate("locationId")
+      .sort({
+        date: 1,
+      });
+
+    return res.status(200).json({
+      success: true,
+      data: events,
+    });
+  } catch (error) {
+    console.error(
+      "Error fetching student events",
+      error
+    );
+
+    return res.status(500).json({
+      message: "Server error",
+    });
+  }
+};
+
 export const updateEvent = async (
   req: Request,
   res: Response
 ) => {
+
+  const parsedTargetDepartments =
+    typeof req.body.targetDepartments === "string"
+      ? JSON.parse(req.body.targetDepartments)
+      : [];
+
+  const parsedTargetMajors =
+    typeof req.body.targetMajors === "string"
+      ? JSON.parse(req.body.targetMajors)
+      : [];
+
+  const parsedTargetYearLevels =
+    typeof req.body.targetYearLevels === "string"
+      ? JSON.parse(req.body.targetYearLevels)
+      : [];
+
+  const parsedTargetSections =
+    typeof req.body.targetSections === "string"
+      ? JSON.parse(req.body.targetSections)
+      : [];
+
   try {
     const eventId = req.params.id;
 
@@ -381,33 +491,20 @@ export const updateEvent = async (
 
     /* NEW TARGETING */
 
-    if (targetDepartments) {
-      event.targetDepartments =
-        targetDepartments;
-    }
+    event.targetDepartments =
+      parsedTargetDepartments;
 
-    if (targetYearLevels) {
-      event.targetYearLevels =
-        targetYearLevels;
-    }
+    event.targetYearLevels =
+      parsedTargetYearLevels;
 
-    if (targetMajors) {
-      event.targetMajors =
-        targetMajors;
-    }
+    event.targetMajors =
+      parsedTargetMajors;
 
-    if (targetSections) {
-      event.targetSections =
-        targetSections;
-    }
+    event.targetSections =
+      parsedTargetSections;
 
-    if (
-      typeof isForAllStudents ===
-      "boolean"
-    ) {
-      event.isForAllStudents =
-        isForAllStudents;
-    }
+    event.isForAllStudents =
+      isForAllStudents === "true";
 
     const now = new Date(
       new Date().toLocaleString(
