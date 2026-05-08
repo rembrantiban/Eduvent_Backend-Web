@@ -1,68 +1,109 @@
 import { Request, Response } from "express";
 import { Event, EventStatus, IEvent } from "./event.Model";
 import cloudinary from "../../config/cloudinary";
-//import { calculateEventStatus } from "../../common/utils/eventStatus";
 import mongoose from "mongoose";
 import { AnyBulkWriteOperation } from "mongoose";
 
-export const createEvent = async (req: Request, res: Response) => {
+export const createEvent = async (
+  req: Request,
+  res: Response
+) => {
   try {
-    const { title, description, date, time, endTime, locationId } = req.body;
+    const {
+      title,
+      description,
+      date,
+      time,
+      endTime,
+      locationId,
 
-    if (!title || !description || !date || !time || !locationId) {
+      /* NEW */
+      targetDepartments,
+      targetYearLevels,
+      targetMajors,
+      targetSections,
+      isForAllStudents,
+    } = req.body;
+
+    if (
+      !title ||
+      !description ||
+      !date ||
+      !time ||
+      !locationId
+    ) {
       return res.status(400).json({
-        message: "Please provide all required fields.",
+        message:
+          "Please provide all required fields.",
       });
     }
 
-    if (!mongoose.Types.ObjectId.isValid(locationId)) {
+    if (
+      !mongoose.Types.ObjectId.isValid(
+        locationId
+      )
+    ) {
       return res.status(400).json({
         message: "Invalid locationId.",
       });
     }
 
     const parseDate = new Date(date);
+
     parseDate.setHours(0, 0, 0, 0);
 
     if (time === endTime) {
       return res.status(400).json({
-        message: "Start time and end time cannot be the same.",
+        message:
+          "Start time and end time cannot be the same.",
       });
     }
 
     let imageUrl: string | undefined;
 
     if (req.file) {
-      const uploadResult = await new Promise<any>((resolve, reject) => {
-        cloudinary.uploader
-          .upload_stream(
-            {
-              folder: "events",
-              resource_type: "image",
-            },
-            (error, result) => {
-              if (error) reject(error);
-              else resolve(result);
-            }
-          )
-          .end(req.file!.buffer);
-      });
+      const uploadResult =
+        await new Promise<any>(
+          (resolve, reject) => {
+            cloudinary.uploader
+              .upload_stream(
+                {
+                  folder: "events",
+                  resource_type: "image",
+                },
+                (error, result) => {
+                  if (error) reject(error);
+                  else resolve(result);
+                }
+              )
+              .end(req.file!.buffer);
+          }
+        );
 
       imageUrl = uploadResult.secure_url;
     }
 
-
     const now = new Date(
-      new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" })
+      new Date().toLocaleString(
+        "en-US",
+        {
+          timeZone: "Asia/Manila",
+        }
+      )
     );
 
     const safeParseTime = (t?: string) => {
-      if (!t || !t.includes(":")) return [0, 0];
+      if (!t || !t.includes(":"))
+        return [0, 0];
+
       return t.split(":").map(Number);
     };
 
-    const [startH, startM] = safeParseTime(time);
-    let [endH, endM] = safeParseTime(endTime);
+    const [startH, startM] =
+      safeParseTime(time);
+
+    let [endH, endM] =
+      safeParseTime(endTime);
 
     if (!endTime) {
       endH = startH + 1;
@@ -86,10 +127,11 @@ export const createEvent = async (req: Request, res: Response) => {
     );
 
     if (eventEnd < eventStart) {
-      eventEnd.setDate(eventEnd.getDate() + 1);
+      eventEnd.setDate(
+        eventEnd.getDate() + 1
+      );
     }
 
-    // ✅ STATUS LOGIC
     let status = EventStatus.UPCOMING;
 
     if (now < eventStart) {
@@ -100,7 +142,6 @@ export const createEvent = async (req: Request, res: Response) => {
       status = EventStatus.FINISHED;
     }
 
-    // ✅ create event
     const newEvent: IEvent = new Event({
       imageUrl,
       title,
@@ -110,24 +151,47 @@ export const createEvent = async (req: Request, res: Response) => {
       endTime,
       locationId,
       status,
+
+      /* NEW TARGETING */
+      targetDepartments:
+        targetDepartments || [],
+
+      targetYearLevels:
+        targetYearLevels || [],
+
+      targetMajors:
+        targetMajors || [],
+
+      targetSections:
+        targetSections || [],
+
+      isForAllStudents:
+        isForAllStudents || false,
     });
 
-    const savedEvent = await newEvent.save();
-    const populatedEvent = await savedEvent.populate("locationId");
+    const savedEvent =
+      await newEvent.save();
+
+    const populatedEvent =
+      await savedEvent.populate(
+        "locationId"
+      );
 
     return res.status(201).json({
       success: true,
       data: populatedEvent,
     });
-
   } catch (err) {
-    console.error(err, "Error in createEvent");
+    console.error(
+      err,
+      "Error in createEvent"
+    );
+
     return res.status(500).json({
       message: "Server error",
     });
   }
 };
-
 
 export const getEvents = async (req: Request, res: Response) => {
   try {
@@ -152,12 +216,10 @@ export const getEvents = async (req: Request, res: Response) => {
       if (event.endTime && event.endTime.includes(":")) {
         [endH, endM] = event.endTime.split(":").map(Number);
       } else {
-        // ✅ fallback: +1 hour
         endH = startH + 1;
         endM = startM;
 }
 
-      // ✅ build start time
       const eventStart = new Date(
         event.date.getFullYear(),
         event.date.getMonth(),
@@ -168,7 +230,6 @@ export const getEvents = async (req: Request, res: Response) => {
         0
       );
 
-      // ✅ build end time (FIXED)
       const eventEnd = new Date(
         event.date.getFullYear(),
         event.date.getMonth(),
@@ -221,80 +282,163 @@ export const getEvents = async (req: Request, res: Response) => {
   }
 };
 
-export const updateEvent = async (req: Request, res: Response) => {
+export const updateEvent = async (
+  req: Request,
+  res: Response
+) => {
   try {
     const eventId = req.params.id;
 
-    const { title, description, date, time, endTime, locationId } = req.body;
+    const {
+      title,
+      description,
+      date,
+      time,
+      endTime,
+      locationId,
+
+      /* NEW */
+      targetDepartments,
+      targetYearLevels,
+      targetMajors,
+      targetSections,
+      isForAllStudents,
+    } = req.body;
 
     const event = await Event.findById(eventId);
+
     if (!event) {
-      return res.status(404).json({ message: "Event not found" });
+      return res.status(404).json({
+        message: "Event not found",
+      });
     }
 
-    if (locationId && !mongoose.Types.ObjectId.isValid(locationId)) {
+    if (
+      locationId &&
+      !mongoose.Types.ObjectId.isValid(
+        locationId
+      )
+    ) {
       return res.status(400).json({
         message: "Invalid locationId.",
       });
     }
 
-    if (time && endTime && time === endTime) {
+    if (
+      time &&
+      endTime &&
+      time === endTime
+    ) {
       return res.status(400).json({
-        message: "Start time and end time cannot be the same.",
+        message:
+          "Start time and end time cannot be the same.",
       });
     }
 
     if (req.file) {
-      const uploadResult = await new Promise<any>((resolve, reject) => {
-        cloudinary.uploader
-          .upload_stream(
-            {
-              folder: "events",
-              resource_type: "image",
-            },
-            (error, result) => {
-              if (error) reject(error);
-              else resolve(result);
-            }
-          )
-          .end(req.file!.buffer);
-      });
+      const uploadResult =
+        await new Promise<any>(
+          (resolve, reject) => {
+            cloudinary.uploader
+              .upload_stream(
+                {
+                  folder: "events",
+                  resource_type: "image",
+                },
+                (error, result) => {
+                  if (error) reject(error);
+                  else resolve(result);
+                }
+              )
+              .end(req.file!.buffer);
+          }
+        );
 
-      event.imageUrl = uploadResult.secure_url;
+      event.imageUrl =
+        uploadResult.secure_url;
     }
 
     if (title) event.title = title;
-    if (description) event.description = description;
+
+    if (description)
+      event.description = description;
 
     if (date) {
       const parsed = new Date(date);
+
       parsed.setHours(0, 0, 0, 0);
+
       event.date = parsed;
     }
 
     if (time) event.time = time;
-    if (endTime) event.endTime = endTime;
-    if (locationId) event.locationId = locationId;
 
+    if (endTime)
+      event.endTime = endTime;
+
+    if (locationId)
+      event.locationId = locationId;
+
+    /* NEW TARGETING */
+
+    if (targetDepartments) {
+      event.targetDepartments =
+        targetDepartments;
+    }
+
+    if (targetYearLevels) {
+      event.targetYearLevels =
+        targetYearLevels;
+    }
+
+    if (targetMajors) {
+      event.targetMajors =
+        targetMajors;
+    }
+
+    if (targetSections) {
+      event.targetSections =
+        targetSections;
+    }
+
+    if (
+      typeof isForAllStudents ===
+      "boolean"
+    ) {
+      event.isForAllStudents =
+        isForAllStudents;
+    }
 
     const now = new Date(
-      new Date().toLocaleString("en-US", { timeZone: "Asia/Manila" })
+      new Date().toLocaleString(
+        "en-US",
+        {
+          timeZone: "Asia/Manila",
+        }
+      )
     );
 
     const safeParseTime = (t?: string) => {
-      if (!t || !t.includes(":")) return [0, 0];
+      if (!t || !t.includes(":"))
+        return [0, 0];
+
       return t.split(":").map(Number);
     };
 
-    const [startH, startM] = safeParseTime(event.time);
-    let [endH, endM] = safeParseTime(event.endTime);
+    const [startH, startM] =
+      safeParseTime(event.time);
+
+    let [endH, endM] =
+      safeParseTime(event.endTime);
 
     if (!event.endTime) {
       endH = startH + 1;
       endM = startM;
     }
 
-    const baseDate = new Date(event.date);
+    const baseDate = new Date(
+      event.date
+    );
 
     const eventStart = new Date(
       baseDate.getFullYear(),
@@ -313,41 +457,59 @@ export const updateEvent = async (req: Request, res: Response) => {
     );
 
     if (eventEnd < eventStart) {
-      eventEnd.setDate(eventEnd.getDate() + 1);
+      eventEnd.setDate(
+        eventEnd.getDate() + 1
+      );
     }
 
-    let newStatus = EventStatus.UPCOMING;
+    let newStatus =
+      EventStatus.UPCOMING;
 
-    if (event.status === EventStatus.CANCELLED) {
-      newStatus = EventStatus.CANCELLED;
+    if (
+      event.status ===
+      EventStatus.CANCELLED
+    ) {
+      newStatus =
+        EventStatus.CANCELLED;
     } else if (now < eventStart) {
-      newStatus = EventStatus.UPCOMING;
+      newStatus =
+        EventStatus.UPCOMING;
     } else if (now <= eventEnd) {
-      newStatus = EventStatus.ONGOING;
+      newStatus =
+        EventStatus.ONGOING;
     } else {
-      newStatus = EventStatus.FINISHED;
+      newStatus =
+        EventStatus.FINISHED;
     }
 
     event.status = newStatus;
 
-    // ✅ save
-    const updatedEvent = await event.save();
-    const populatedEvent = await updatedEvent.populate("locationId");
+    /* SAVE */
+    const updatedEvent =
+      await event.save();
+
+    const populatedEvent =
+      await updatedEvent.populate(
+        "locationId"
+      );
 
     return res.status(200).json({
       success: true,
       data: populatedEvent,
     });
-
   } catch (err) {
-    console.error("Error in updateEvent", err);
+    console.error(
+      "Error in updateEvent",
+      err
+    );
+
     return res.status(500).json({
       success: false,
-      message: "Internal Server Error",
+      message:
+        "Internal Server Error",
     });
   }
 };
-
 
 const getPublicIdFromUrl = (url: string): string | null => {
   try {
