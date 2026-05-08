@@ -690,7 +690,7 @@ export const updateUserProfileForStudent = async (req: Request, res: Response) =
       lastName: lastName.trim(),
       yearLevel: yearLevel.trim(),
       department: department.trim(),
-       major: major.trim(),
+      major: major.trim(),
       section: section.trim()
     };
 
