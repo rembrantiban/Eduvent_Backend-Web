@@ -231,6 +231,7 @@ export const createUserByAdmin = async (
       studentId,
       yearLevel,
       section,
+      major,
     } = req.body;
 
     // ✅ Allowed roles
@@ -290,6 +291,7 @@ export const createUserByAdmin = async (
       role,
       department,
     ...(role === "student" || role === "CSSG_officer") && {
+        major,
         studentId,
         yearLevel,
         section,
@@ -305,6 +307,7 @@ export const createUserByAdmin = async (
         email: newUser.email,
         role: newUser.role,
         department: newUser.department,
+        major: newUser.major,
       },
     });
 
@@ -557,7 +560,7 @@ export const loginUser = async (req: Request, res: Response) => {
 
     const isProfileComplete =
       user.role !== "student" ||
-      (user.yearLevel && user.department && user.section);
+      (user.yearLevel && user.department &&  user.section && user.major);
 
 
     const token = jwt.sign(
@@ -569,6 +572,7 @@ export const loginUser = async (req: Request, res: Response) => {
         department: user.department,
         section: user.section,
         yearLevel: user.yearLevel,
+        major: user.major,
         isFaceRegistered: user.isFaceRegistered,
         avatar: user.avatar
       },
@@ -587,6 +591,7 @@ export const loginUser = async (req: Request, res: Response) => {
         studentId: user.studentId,
         yearLevel: user.yearLevel,
         department: user.department,
+        major: user.major,
         section: user.section,
         profileCompleted: isProfileComplete,
         avatar: user.avatar,
@@ -610,10 +615,10 @@ export const completeProfile = async (req: Request, res: Response) => {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    const { yearLevel, department, section } = req.body;
+    const { yearLevel, department, section, major } = req.body;
     const userId = req.user._id;
 
-    if (!yearLevel || !department || !section) {
+    if (!yearLevel || !department || !section || !major) {
       return res.status(400).json({
         message: "Please provide all required fields.",
       });
@@ -625,6 +630,7 @@ export const completeProfile = async (req: Request, res: Response) => {
         yearLevel: yearLevel.trim(),
         department: department.trim(),
         section: section.trim(),
+        major: major.trim(),
       },
       { new: true }
     );
@@ -644,9 +650,9 @@ export const completeProfile = async (req: Request, res: Response) => {
 export const updateUserProfileForStudent = async (req: Request, res: Response) => {
   try {
     const userId = req.user?._id;
-    const { firstName, lastName, yearLevel, department, section } = req.body;
+    const { firstName, lastName, yearLevel, department, section, major } = req.body;
 
-    if (!firstName || !lastName || !yearLevel || !department || !section) {
+    if (!firstName || !lastName || !yearLevel || !department || !section || !major) {
       return res.status(400).json({
         message: "All fields are required",
       });
@@ -684,6 +690,7 @@ export const updateUserProfileForStudent = async (req: Request, res: Response) =
       lastName: lastName.trim(),
       yearLevel: yearLevel.trim(),
       department: department.trim(),
+       major: major.trim(),
       section: section.trim()
     };
 
