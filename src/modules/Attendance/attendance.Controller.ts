@@ -8,12 +8,22 @@ import { Location } from "../Location/location.Model";
 import { calculateDistance } from "../../common/utils/distance";
 import mongoose from "mongoose";
 
+//export type AttendanceType = "TIME_IN" | "TIME_OUT";
+
 export class AttendanceController {
 
   static async recordAttendance(req: Request, res: Response) {
     try {
 
-      const { eventId } = req.body;
+      const { eventId, attendanceType } = req.body;
+
+      if (attendanceType !== "TIME_IN" && attendanceType !== "TIME_OUT") {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Invalid attendance type"
+        });
+      }
 
       const lat = parseFloat(req.body.lat);
       const lng = parseFloat(req.body.lng);
@@ -164,11 +174,20 @@ export class AttendanceController {
       });
 
       /* 9 Save attendance */
-      /* 9 Attendance Logic */
 
-      if (!existingAttendance) {
+      /* TIME IN */
 
-        /* FIRST SCAN = TIME IN */
+      if (attendanceType === "TIME_IN") {
+
+        if (existingAttendance?.timeIn) {
+
+          return res.status(409).json({
+            success: false,
+            message:
+              "Time in already recorded"
+          });
+
+        }
 
         const attendance =
           await Attendance.create({
@@ -184,25 +203,34 @@ export class AttendanceController {
         return res.status(201).json({
           success: true,
           type: "TIME_IN",
-          message: "Time in recorded successfully",
+          message:
+            "Time in recorded successfully",
           attendance
         });
 
       }
 
-      /* SECOND SCAN = TIME OUT */
+      /* TIME OUT */
 
-      if (
-        existingAttendance.timeOut
-      ) {
+      if (!existingAttendance) {
+
+        return res.status(404).json({
+          success: false,
+          message:
+            "No existing time in record found"
+        });
+
+      }
+
+      if (existingAttendance.timeOut) {
+
         return res.status(409).json({
           success: false,
           message:
             "Time out already recorded"
         });
-      }
 
-      /* UPDATE TIME OUT */
+      }
 
       existingAttendance.timeOut =
         now;
@@ -223,7 +251,6 @@ export class AttendanceController {
         attendance:
           existingAttendance
       });
-
     } catch (error: any) {
 
       console.error(error?.response?.data || error.message);
