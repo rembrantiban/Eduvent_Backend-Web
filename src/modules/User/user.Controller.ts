@@ -516,7 +516,8 @@ export const loginAdmin = async (req: Request, res: Response) => {
         email: user.email,
         role: user.role,
         department: user.department,
-        avatar: user.avatar
+        avatar: user.avatar,
+        isFaceRegistered: user.isFaceRegistered
       },
     });
   } catch (err) {
@@ -595,6 +596,7 @@ export const loginUser = async (req: Request, res: Response) => {
         section: user.section,
         profileCompleted: isProfileComplete,
         avatar: user.avatar,
+        isFaceRegistered: user.isFaceRegistered
       },
       token,
     });
