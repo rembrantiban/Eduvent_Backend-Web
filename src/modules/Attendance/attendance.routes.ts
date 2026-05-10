@@ -16,7 +16,8 @@ router.post(
 );
 router.get("/get-event-attendance/:eventId", AttendanceController.getEventAttendance);
 router.get("/get-events-with-attendance", AttendanceController.getEventsWithAttendance);
-router.get("/dashboard-stats", MobileAuth, AttendanceController.getStudentDashboardStats);
 router.get("/get-all-attendance-ongoing", MobileAuth, AttendanceController.getAllAttendanceOngoing);
 router.get("/my-attendance-history", MobileAuth, AttendanceController.getMyAttendanceHistory);
+router.get("/dashboard-stats", MobileAuth, AttendanceController.getStudentDashboardStats);
+
 export default router;
