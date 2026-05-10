@@ -15,4 +15,5 @@ router.post(
 );
 router.get("/get-event-attendance/:eventId", AttendanceController.getEventAttendance);
 router.get("/get-events-with-attendance", AttendanceController.getEventsWithAttendance);
+router.get("/get-all-attendance-ongoing", AttendanceController.getAllAttendanceOngoing);
 export default router;

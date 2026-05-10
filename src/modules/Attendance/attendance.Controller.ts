@@ -320,6 +320,7 @@ export class AttendanceController {
                     email: "$user.email",
                     studentId: "$user.studentId",
                     department: "$user.department",
+                    major: "$user.major",
                     section: "$user.section",
                     yearLevel: "$user.yearLevel"
                   },
@@ -352,11 +353,8 @@ export class AttendanceController {
                 }
               }
             ]
-
           }
-
         }
-
       ]);
 
       const attendance = result[0].attendance;
@@ -434,4 +432,105 @@ export class AttendanceController {
 
     }
   }
+
+  static async getAllAttendanceOngoing(req: Request, res: Response) {
+  try {
+
+    const result = await Attendance.aggregate([
+
+
+      {
+        $lookup: {
+          from: "events",
+          localField: "eventId",
+          foreignField: "_id",
+          as: "event"
+        }
+      },
+
+      {
+        $unwind: "$event"
+      },
+
+      /* Filter Ongoing Events */
+
+      {
+        $match: {
+          "event.status": "Ongoing"
+        }
+      },
+
+      /* Join User */
+
+      {
+        $lookup: {
+          from: "users",
+          localField: "userId",
+          foreignField: "_id",
+          as: "user"
+        }
+      },
+
+      {
+        $unwind: "$user"
+      },
+
+      /* Project */
+
+      {
+        $project: {
+          _id: 1,
+          status: 1,
+          confidence: 1,
+          timeIn: 1,
+          timeOut: 1,
+          imageUrl: 1,
+
+          user: {
+            firstName: "$user.firstName",
+            lastName: "$user.lastName",
+            email: "$user.email",
+            studentId: "$user.studentId",
+            department: "$user.department",
+            major: "$user.major",
+            section: "$user.section",
+            yearLevel: "$user.yearLevel"
+          },
+
+          event: {
+            _id: "$event._id",
+            title: "$event.title",
+            date: "$event.date",
+            time: "$event.time",
+            venue: "$event.venue",
+            status: "$event.status"
+          }
+        }
+      },
+
+      {
+        $sort: {
+          timeIn: -1
+        }
+      }
+
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      total: result.length,
+      attendance: result
+    });
+
+  } catch (error) {
+
+    console.error(error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch ongoing attendance"
+    });
+
+  }
+}
 }
