@@ -625,4 +625,111 @@ export class AttendanceController {
 
   }
 }
+
+static async getMyAttendanceHistory(
+  req: Request,
+  res: Response
+) {
+
+  try {
+
+    const userId = req.user?._id;
+
+    if (!userId) {
+
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized"
+      });
+
+    }
+
+    const userObjectId =
+      new mongoose.Types.ObjectId(userId);
+
+    const attendance =
+      await Attendance.aggregate([
+
+        {
+          $match: {
+            userId: userObjectId
+          }
+        },
+
+        {
+          $lookup: {
+            from: "events",
+            localField: "eventId",
+            foreignField: "_id",
+            as: "event"
+          }
+        },
+
+        {
+          $unwind: "$event"
+        },
+
+        {
+          $project: {
+
+            _id: 1,
+
+            status: 1,
+
+            timeIn: 1,
+
+            timeOut: 1,
+
+            imageUrl: 1,
+
+            confidence: 1,
+
+            createdAt: 1,
+
+            event: {
+              _id: "$event._id",
+              title: "$event.title",
+              description:
+                "$event.description",
+              venue: "$event.venue",
+              date: "$event.date",
+              time: "$event.time",
+              status: "$event.status",
+              department:
+                "$event.department"
+            }
+
+          }
+        },
+
+        {
+          $sort: {
+            createdAt: -1
+          }
+        }
+
+      ]);
+
+    return res.status(200).json({
+
+      success: true,
+
+      total: attendance.length,
+
+      attendance
+
+    });
+
+  } catch (error) {
+
+    console.error(error);
+
+    return res.status(500).json({
+      success: false,
+      message:
+        "Failed to fetch attendance history"
+    });
+
+  }
+}
 }
