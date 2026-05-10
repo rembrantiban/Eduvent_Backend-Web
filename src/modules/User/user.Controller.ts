@@ -948,6 +948,7 @@ export const getAllUsers = async (req: Request, res: Response) => {
         role: user.role,
         section: user.section,
         department: user.department,
+        major: user.major,
         studentId: user.studentId,
         yearLevel: user.yearLevel,
         avatar: user.avatar,
