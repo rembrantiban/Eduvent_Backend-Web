@@ -434,92 +434,183 @@ export class AttendanceController {
   }
 
   static async getAllAttendanceOngoing(req: Request, res: Response) {
-  try {
+    try {
 
-    const result = await Attendance.aggregate([
+      const result = await Attendance.aggregate([
 
 
-      {
-        $lookup: {
-          from: "events",
-          localField: "eventId",
-          foreignField: "_id",
-          as: "event"
-        }
-      },
+        {
+          $lookup: {
+            from: "events",
+            localField: "eventId",
+            foreignField: "_id",
+            as: "event"
+          }
+        },
 
-      {
-        $unwind: "$event"
-      },
+        {
+          $unwind: "$event"
+        },
 
-      /* Filter Ongoing Events */
+        /* Filter Ongoing Events */
 
-      {
-        $match: {
-          "event.status": "Ongoing"
-        }
-      },
+        {
+          $match: {
+            "event.status": "Ongoing"
+          }
+        },
 
-      /* Join User */
+        /* Join User */
 
-      {
-        $lookup: {
-          from: "users",
-          localField: "userId",
-          foreignField: "_id",
-          as: "user"
-        }
-      },
+        {
+          $lookup: {
+            from: "users",
+            localField: "userId",
+            foreignField: "_id",
+            as: "user"
+          }
+        },
 
-      {
-        $unwind: "$user"
-      },
+        {
+          $unwind: "$user"
+        },
 
-      /* Project */
+        /* Project */
 
-      {
-        $project: {
-          _id: 1,
-          status: 1,
-          confidence: 1,
-          timeIn: 1,
-          timeOut: 1,
-          imageUrl: 1,
+        {
+          $project: {
+            _id: 1,
+            status: 1,
+            confidence: 1,
+            timeIn: 1,
+            timeOut: 1,
+            imageUrl: 1,
 
-          user: {
-            firstName: "$user.firstName",
-            lastName: "$user.lastName",
-            email: "$user.email",
-            studentId: "$user.studentId",
-            department: "$user.department",
-            major: "$user.major",
-            section: "$user.section",
-            yearLevel: "$user.yearLevel"
-          },
+            user: {
+              firstName: "$user.firstName",
+              lastName: "$user.lastName",
+              email: "$user.email",
+              studentId: "$user.studentId",
+              department: "$user.department",
+              major: "$user.major",
+              section: "$user.section",
+              yearLevel: "$user.yearLevel"
+            },
 
-          event: {
-            _id: "$event._id",
-            title: "$event.title",
-            date: "$event.date",
-            time: "$event.time",
-            venue: "$event.venue",
-            status: "$event.status"
+            event: {
+              _id: "$event._id",
+              title: "$event.title",
+              date: "$event.date",
+              time: "$event.time",
+              venue: "$event.venue",
+              status: "$event.status"
+            }
+          }
+        },
+
+        {
+          $sort: {
+            timeIn: -1
           }
         }
-      },
 
-      {
-        $sort: {
-          timeIn: -1
+      ]);
+
+      return res.status(200).json({
+        success: true,
+        total: result.length,
+        attendance: result
+      });
+
+    } catch (error) {
+
+      console.error(error);
+
+      return res.status(500).json({
+        success: false,
+        message: "Failed to fetch ongoing attendance"
+      });
+
+    }
+  }
+
+  static async getStudentDashboardStats(
+  req: Request,
+  res: Response
+) {
+
+  try {
+
+    const userId = req.user?._id;
+
+    if (!userId) {
+
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized"
+      });
+
+    }
+
+    const userObjectId =
+      new mongoose.Types.ObjectId(userId);
+
+    /* TOTAL ATTENDANCE */
+
+    const totalAttendance =
+      await Attendance.countDocuments({
+        userId: userObjectId
+      });
+
+    /* EVENTS JOINED */
+
+    const eventsJoined =
+      await Attendance.distinct(
+        "eventId",
+        {
+          userId: userObjectId
         }
-      }
+      );
 
-    ]);
+    /* MISSED EVENTS */
+
+    const missedEvents =
+      await Event.countDocuments({
+
+        status: "Completed",
+
+        _id: {
+          $nin: eventsJoined
+        }
+
+      });
+
+    /* UPCOMING EVENTS */
+
+    const upcomingEventsCount =
+      await Event.countDocuments({
+        status: "Upcoming"
+      });
 
     return res.status(200).json({
+
       success: true,
-      total: result.length,
-      attendance: result
+
+      stats: {
+
+        attendanceCount:
+          totalAttendance,
+
+        eventsJoinedCount:
+          eventsJoined.length,
+
+        missedEventsCount:
+          missedEvents,
+
+        upcomingEventsCount:
+          upcomingEventsCount
+      }
+
     });
 
   } catch (error) {
@@ -528,7 +619,8 @@ export class AttendanceController {
 
     return res.status(500).json({
       success: false,
-      message: "Failed to fetch ongoing attendance"
+      message:
+        "Failed to fetch dashboard stats"
     });
 
   }
