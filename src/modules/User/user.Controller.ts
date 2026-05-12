@@ -6,7 +6,7 @@ import validator from "validator";
 import crypto from "crypto";
 import { resend } from "../../common/lib/resend";
 import cloudinary from "../../config/cloudinary"
-import  canAssignRole  from "../../common/utils/roles"
+import canAssignRole from "../../common/utils/roles"
 const SALT_ROUNDS = 12;
 
 export const signupUser = async (req: Request, res: Response) => {
@@ -290,7 +290,7 @@ export const createUserByAdmin = async (
       password: hashedPassword,
       role,
       department,
-    ...(role === "student" || role === "CSSG_officer") && {
+      ...(role === "student" || role === "CSSG_officer") && {
         major,
         studentId,
         yearLevel,
@@ -422,7 +422,7 @@ export const updateUser = async (req: Request, res: Response) => {
       updateData.section = section;
     }
 
-  
+
     if (password) {
       if (password.length < 6) {
         return res.status(400).json({
@@ -456,7 +456,7 @@ export const updateUser = async (req: Request, res: Response) => {
     console.error("Update user error:", error);
 
     return res.status(500).json({
-      message: error.message, 
+      message: error.message,
     });
   }
 };
@@ -469,7 +469,7 @@ export const loginAdmin = async (req: Request, res: Response) => {
       return res.status(400).json({ message: "Please provide email and password." });
     }
 
-   
+
     const user = await User.findOne({
       email: email,
       role: { $in: ["admin", "CSSG_Adviser", "Saso", "CSSG_officer"] },
@@ -479,7 +479,7 @@ export const loginAdmin = async (req: Request, res: Response) => {
       return res.status(401).json({ message: "Invalid credentials." });
     }
 
-    if(user.isActive === false) {
+    if (user.isActive === false) {
       return res.status(401).json({ message: "Your account is deactivated. Please contact admin." });
     }
 
@@ -565,7 +565,7 @@ export const loginUser = async (req: Request, res: Response) => {
 
     const isProfileComplete =
       user.role !== "student" ||
-      (user.yearLevel && user.department &&  user.section && user.major);
+      (user.yearLevel && user.department && user.section && user.major);
 
 
     const token = jwt.sign(
@@ -981,24 +981,44 @@ export const getAllUsers = async (req: Request, res: Response) => {
 };
 
 
-export const DeacticvateUserAccount = async (req: Request, res: Response) => {
+export const DeactivateUserAccount = async (
+  req: Request,
+  res: Response
+) => {
+
   try {
+
     const { id } = req.params;
 
-    const deactivatedUser = await User.findByIdAndUpdate(
-      id,
-      { isActive: false },
-      { new: true }
-    );
+    const user = await User.findById(id);
 
-    if (!deactivatedUser) {
-      return res.status(404).json({ message: "User not found" });
+    if (!user) {
+
+      return res.status(404).json({
+        message: "User not found"
+      });
+
     }
 
-    return res.json({ message: "User account deactivated successfully" });
+    user.isActive = !user.isActive;
+    await user.save();
+
+    return res.json({
+
+      success: true,
+
+      message: user.isActive
+        ? "User account activated successfully"
+        : "User account deactivated successfully",
+      user
+    });
+
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ message: "Server error" });
+    return res.status(500).json({
+      message: "Server error"
+    });
+
   }
 };
 
@@ -1164,7 +1184,7 @@ export const updateUserRole = async (req: any, res: any) => {
     const VALID_ROLES = ["admin", "Saso", "CSSG_Adviser", "CSSG_officer", "student"];
 
 
-    
+
 
     // ✅ Validate role
     if (!VALID_ROLES.includes(role)) {
