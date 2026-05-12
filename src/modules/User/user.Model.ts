@@ -36,7 +36,7 @@ const UserSchema: Schema = new Schema<IUser>(
     lastName: { type: String, required: true },
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
-    role: { type: String, enum: ["admin", "teacher","CSSG_officer", "Saso", "student"], default: "student" },
+    role: { type: String, enum: ["admin", "CSSG_Adviser","CSSG_officer", "Saso", "student"], default: "student" },
     isActive: { type: Boolean, default: true },
     avatar: { type: String, default: null },
 

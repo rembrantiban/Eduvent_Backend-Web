@@ -18,6 +18,7 @@ import {
          getTotalUsers,
          deleteUserAccount,
          savePushToken,
+         DeacticvateUserAccount,
          updateUserFullname,
          updatePassword,
          updateUserProfileForStudent,
@@ -50,5 +51,6 @@ router.put("/update-fullname", requireAuth,uploadImage.single("avatar"), updateU
 router.put("/update-password", requireAuth, updatePassword);
 router.put("/update-profile-for-student", requireAuth, uploadImage.single("avatar"), updateUserProfileForStudent);
 router.put("/update-user-role/:id", requireAuth, updateUserRole);
+router.put("/deactivate-user/:id", requireAuth, DeacticvateUserAccount);
 
 export default router;  

@@ -748,3 +748,21 @@ export const getTotalUpComingEvents = async (req: Request, res: Response) => {
     });
   }
 }
+
+export const getTotalOngoingEvents = async (req: Request, res: Response) => {
+  try {
+    const onGoingEvents = await Event.find({
+      status: EventStatus.ONGOING,
+    }).populate("locationId");
+
+    return res.status(200).json({
+      success: true,
+      data: onGoingEvents,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
+  }
+}

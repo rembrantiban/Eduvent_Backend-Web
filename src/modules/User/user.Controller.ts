@@ -469,7 +469,7 @@ export const loginAdmin = async (req: Request, res: Response) => {
       return res.status(400).json({ message: "Please provide email and password." });
     }
 
-
+   
     const user = await User.findOne({
       email: email,
       role: { $in: ["admin", "CSSG_Adviser", "Saso", "CSSG_officer"] },
@@ -477,6 +477,10 @@ export const loginAdmin = async (req: Request, res: Response) => {
 
     if (!user) {
       return res.status(401).json({ message: "Invalid credentials." });
+    }
+
+    if(user.isActive === false) {
+      return res.status(401).json({ message: "Your account is deactivated. Please contact admin." });
     }
 
     const isValidPassword = await bcrypt.compare(password, user.password);
@@ -952,6 +956,7 @@ export const getAllUsers = async (req: Request, res: Response) => {
         studentId: user.studentId,
         yearLevel: user.yearLevel,
         avatar: user.avatar,
+        isActive: user.isActive,
         dateAdded: user.createdAt
           ? new Intl.DateTimeFormat("en-US", {
             year: "numeric",
@@ -975,6 +980,27 @@ export const getAllUsers = async (req: Request, res: Response) => {
   }
 };
 
+
+export const DeacticvateUserAccount = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const deactivatedUser = await User.findByIdAndUpdate(
+      id,
+      { isActive: false },
+      { new: true }
+    );
+
+    if (!deactivatedUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    return res.json({ message: "User account deactivated successfully" });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
 
 export const getTotalUsers = async (req: Request, res: Response) => {
   try {
