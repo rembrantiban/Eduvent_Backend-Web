@@ -106,13 +106,14 @@ export class AttendanceController {
       }
 
       const recognizedStudentId =
-        recognizeData.usn;
+        recognizeData.usn
+          ?.trim()
+          ?.toLowerCase();
 
-      const confidence =
-        recognizeData.confidence;
+      console.log("RECOGNIZED STUDENT:", JSON.stringify(recognizedStudentId));
 
-
-      if (confidence > 70) {
+      const confidence = recognizeData.confidence;
+      if (confidence > 50) {
 
         return res.status(401).json({
           success: false,
@@ -122,11 +123,19 @@ export class AttendanceController {
 
       }
 
-      const user =
-        await User.findOne({
-          studentId:
-            recognizedStudentId
-        });
+      const allUsers = await User.find();
+      console.log("ALL USERS:",
+        allUsers.map(u => ({
+          dbStudentId:
+            JSON.stringify(
+              u.studentId
+            ),
+          dbId: u._id
+        }))
+      );
+
+      const user = await User.findOne({ studentId: recognizedStudentId });
+      console.log("FOUND USER:", user);
 
       if (!user) {
 
@@ -148,16 +157,11 @@ export class AttendanceController {
 
       const userId = user._id;
 
-
       const existingAttendance =
         await Attendance.findOne({
           eventId,
           userId
         });
-
-      // =========================
-      // FIND EVENT
-      // =========================
 
       const event =
         await Event.findById(
@@ -214,10 +218,6 @@ export class AttendanceController {
         "DISTANCE:",
         distance
       );
-
-      // =========================
-      // DETERMINE STATUS
-      // =========================
 
       const now = new Date();
 
