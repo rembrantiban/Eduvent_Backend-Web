@@ -564,7 +564,7 @@ export const loginUser = async (req: Request, res: Response) => {
     }
 
     const isProfileComplete =
-      user.role !== "student" ||
+      user.role !== "student" && user.role !=="CSSG_officer" ||
       (user.yearLevel && user.department && user.section && user.major);
 
 
