@@ -11,7 +11,7 @@ const upload = multer({
 
 router.post(
   "/record",
-  upload.single("image"),
+  upload.single("image"),MobileAuth,
   AttendanceController.recordAttendance
 );
 router.get("/get-event-attendance/:eventId", AttendanceController.getEventAttendance);
