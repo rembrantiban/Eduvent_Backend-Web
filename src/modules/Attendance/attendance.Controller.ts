@@ -105,10 +105,17 @@ export class AttendanceController {
           ?.trim()
           ?.toLowerCase();
 
+      if (!recognizedStudentId) {
+        return res.status(400).json({
+          success: false,
+          message: "Flask API returned invalid USN"
+        });
+      }
+
       console.log("RECOGNIZED STUDENT:", JSON.stringify(recognizedStudentId));
 
       const confidence = recognizeData.confidence;
-      if (confidence > 50) {
+      if (confidence > 70) {
 
         return res.status(401).json({
           success: false,
@@ -119,13 +126,12 @@ export class AttendanceController {
       }
 
       const allUsers = await User.find();
-      console.log("ALL USERS:",
+      console.log("[DEBUG] ALL USERS COUNT:", allUsers.length);
+      console.log("[DEBUG] SEARCHING FOR:", recognizedStudentId);
+      console.log("[DEBUG] ALL STUDENT IDS:",
         allUsers.map(u => ({
-          dbStudentId:
-            JSON.stringify(
-              u.studentId
-            ),
-          dbId: u._id
+          studentId: u.studentId,
+          matches: u.studentId?.toLowerCase() === recognizedStudentId
         }))
       );
 
@@ -138,7 +144,7 @@ export class AttendanceController {
             )
           }
         });
-      console.log("FOUND USER:", user);
+      console.log("[DEBUG] FOUND USER:", user ? `${user.firstName} ${user.lastName}` : "NOT FOUND");
 
       if (!user) {
 
@@ -307,21 +313,14 @@ export class AttendanceController {
         return res.status(201).json({
 
           success: true,
-
           type: "TIME_IN",
-
           message:
             "Time in recorded successfully",
-
           attendance
 
         });
 
       }
-
-      // =========================
-      // TIME OUT
-      // =========================
 
       if (!existingAttendance) {
 
