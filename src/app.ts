@@ -64,7 +64,7 @@ app.get("/api/ping", (req, res) => {
 
 app.use("/api/auth", userRoutes);
 app.use("/api/event", eventRoutes);
-app.use("/api/face", faceRoutes);
+//app.use("/api/face", faceRoutes);
 app.use("/api/location", locationRoutes);
 app.use("/api/department", departmentRoutes);
 app.use("/api/attendance", attendanceRoutes);
