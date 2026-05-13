@@ -7,7 +7,6 @@ exports.requireAuth = void 0;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const user_Model_1 = require("../../modules/User/user.Model");
 const requireAuth = async (req, res, next) => {
-    // 🔥 HEADER ONLY
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
         return res.status(401).json({ message: "Unauthorized" });

@@ -7,11 +7,7 @@ const app_1 = __importDefault(require("./app"));
 const dotenv_1 = __importDefault(require("dotenv"));
 const db_1 = require("./config/db");
 dotenv_1.default.config();
-(0, db_1.connectDB)();
 const PORT = Number(process.env.PORT) || 3000;
-// console.log("Resend API Key:", !!process.env.RESEND_API_KEY);
-// console.log("FACEPP_KEY =", process.env.FACEPP_KEY);
-// console.log("FACEPP_SECRET =", process.env.FACEPP_SECRET);
 async function startServer() {
     try {
         await (0, db_1.connectDB)();

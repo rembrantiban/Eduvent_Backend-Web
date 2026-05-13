@@ -444,7 +444,7 @@ const loginUser = async (req, res) => {
                 message: "Invalid credentials.",
             });
         }
-        const isProfileComplete = user.role !== "student" ||
+        const isProfileComplete = user.role !== "student" && user.role !== "CSSG_officer" ||
             (user.yearLevel && user.department && user.section && user.major);
         const token = jsonwebtoken_1.default.sign({
             id: user._id,

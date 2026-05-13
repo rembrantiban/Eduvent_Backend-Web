@@ -11,14 +11,14 @@ import axios from "axios";
 import FLASK_API from "../../config/flask";
 
 
-
+console.log("ATTENDANCE CONTROLLER HIT");
 export class AttendanceController {
 
   static async recordAttendance(
     req: Request,
     res: Response
   ) {
-
+    console.log("ATTENDANCE CONTROLLER HIT");
     try {
 
       const {
@@ -105,17 +105,10 @@ export class AttendanceController {
           ?.trim()
           ?.toLowerCase();
 
-      if (!recognizedStudentId) {
-        return res.status(400).json({
-          success: false,
-          message: "Flask API returned invalid USN"
-        });
-      }
-
       console.log("RECOGNIZED STUDENT:", JSON.stringify(recognizedStudentId));
 
       const confidence = recognizeData.confidence;
-      if (confidence > 70) {
+      if (confidence > 50) {
 
         return res.status(401).json({
           success: false,
@@ -126,12 +119,13 @@ export class AttendanceController {
       }
 
       const allUsers = await User.find();
-      console.log("[DEBUG] ALL USERS COUNT:", allUsers.length);
-      console.log("[DEBUG] SEARCHING FOR:", recognizedStudentId);
-      console.log("[DEBUG] ALL STUDENT IDS:",
+      console.log("ALL USERS:",
         allUsers.map(u => ({
-          studentId: u.studentId,
-          matches: u.studentId?.toLowerCase() === recognizedStudentId
+          dbStudentId:
+            JSON.stringify(
+              u.studentId
+            ),
+          dbId: u._id
         }))
       );
 
@@ -144,7 +138,7 @@ export class AttendanceController {
             )
           }
         });
-      console.log("[DEBUG] FOUND USER:", user ? `${user.firstName} ${user.lastName}` : "NOT FOUND");
+      console.log("FOUND USER:", user);
 
       if (!user) {
 
@@ -321,6 +315,10 @@ export class AttendanceController {
         });
 
       }
+
+      // =========================
+      // TIME OUT
+      // =========================
 
       if (!existingAttendance) {
 
