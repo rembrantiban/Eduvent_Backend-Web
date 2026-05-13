@@ -1,0 +1,35 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = __importDefault(require("express"));
+const authmiddleware_1 = require("../../common/middleware/authmiddleware");
+const AuthCookieMiddleware_1 = require("../../middleware/AuthCookieMiddleware");
+const user_Controller_1 = require("./user.Controller");
+const multer_1 = __importDefault(require("../../middleware/multer"));
+const router = express_1.default.Router();
+router.post("/signup", user_Controller_1.signupUser);
+router.post("/login", user_Controller_1.loginUser);
+router.put("/update-user/:id", authmiddleware_1.requireAuth, user_Controller_1.updateUser);
+router.post("/admin-login", user_Controller_1.loginAdmin);
+router.get("/check-auth", authmiddleware_1.requireAuth, user_Controller_1.checkUserAuth);
+router.post("/logout", user_Controller_1.logoutUser);
+router.put("/complete-profile", AuthCookieMiddleware_1.MobileAuth, user_Controller_1.completeProfile);
+router.post("/request-password-reset", user_Controller_1.requestResetCode);
+router.post("/verify-password-reset", user_Controller_1.verifyResetCode);
+router.post("/confirm-password-reset", user_Controller_1.resetPassword);
+router.post("/create-user-by-teacher", authmiddleware_1.requireAuth, user_Controller_1.createUserByTeacher);
+router.post("/create-user-by-admin", authmiddleware_1.requireAuth, user_Controller_1.createUserByAdmin);
+router.get("/get-all-users", authmiddleware_1.requireAuth, user_Controller_1.getAllUsers);
+router.get("/get-users-same-department", authmiddleware_1.requireAuth, user_Controller_1.getUsersSameDepartment);
+router.get("/get-total-users", user_Controller_1.getTotalUsers);
+router.delete("/delete-user/:id", authmiddleware_1.requireAuth, user_Controller_1.deleteUserAccount);
+router.post("/save-push-token", AuthCookieMiddleware_1.MobileAuth, user_Controller_1.savePushToken);
+router.put("/update-fullname", authmiddleware_1.requireAuth, multer_1.default.single("avatar"), user_Controller_1.updateUserFullname);
+router.put("/update-password", authmiddleware_1.requireAuth, user_Controller_1.updatePassword);
+router.put("/update-profile-for-student", authmiddleware_1.requireAuth, multer_1.default.single("avatar"), user_Controller_1.updateUserProfileForStudent);
+router.put("/update-user-role/:id", authmiddleware_1.requireAuth, user_Controller_1.updateUserRole);
+router.put("/deactivate-user/:id", authmiddleware_1.requireAuth, user_Controller_1.DeactivateUserAccount);
+exports.default = router;
+//# sourceMappingURL=user.Routes.js.map
