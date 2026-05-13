@@ -15,415 +15,367 @@ import FLASK_API from "../../config/flask";
 export class AttendanceController {
 
   static async recordAttendance(
-  req: Request,
-  res: Response
-) {
+    req: Request,
+    res: Response
+  ) {
 
-  try {
+    try {
 
-    const {
-      eventId,
-      attendanceType
-    } = req.body;
-
-    if (
-      attendanceType !== "TIME_IN" &&
-      attendanceType !== "TIME_OUT"
-    ) {
-
-      return res.status(400).json({
-        success: false,
-        message:
-          "Invalid attendance type"
-      });
-
-    }
-
-    const lat =
-      parseFloat(req.body.lat);
-
-    const lng =
-      parseFloat(req.body.lng);
-
-    if (
-      isNaN(lat) ||
-      isNaN(lng)
-    ) {
-
-      return res.status(400).json({
-        success: false,
-        message:
-          "Invalid GPS coordinates"
-      });
-
-    }
-
-    if (!req.file) {
-
-      return res.status(400).json({
-        success: false,
-        message:
-          "Image required"
-      });
-
-    }
-
-    const file = req.file;
-
-    // =========================
-    // CONVERT IMAGE TO BASE64
-    // =========================
-
-    const base64Image =
-      file.buffer.toString(
-        "base64"
-      );
-
-    // =========================
-    // SEND IMAGE TO FLASK
-    // =========================
-
-    const flaskResponse =
-      await axios.post(
-        `${FLASK_API}/recognize`,
-        {
-          image:
-            `data:image/jpeg;base64,${base64Image}`
-        }
-      );
-
-    const recognizeData =
-      flaskResponse.data;
-
-    console.log(
-      "FLASK RESPONSE:",
-      recognizeData
-    );
-
-    // =========================
-    // VALIDATE FACE
-    // =========================
-
-    if (!recognizeData.success) {
-
-      return res.status(401).json({
-        success: false,
-        message:
-          recognizeData.message ||
-          "Face not recognized"
-      });
-
-    }
-
-    const recognizedStudentId =
-      recognizeData.usn;
-
-    const confidence =
-      recognizeData.confidence;
-
-    // =========================
-    // OPTIONAL STRICT CHECK
-    // =========================
-
-    if (confidence > 70) {
-
-      return res.status(401).json({
-        success: false,
-        message:
-          "Face confidence too low"
-      });
-
-    }
-
-    // =========================
-    // FIND USER
-    // =========================
-
-    const user =
-      await User.findOne({
-        studentId:
-          recognizedStudentId
-      });
-
-    if (!user) {
-
-      return res.status(404).json({
-        success: false,
-        message:
-          "Recognized student not found"
-      });
-
-    }
-
-    // =========================
-    // SECURITY CHECK
-    // =========================
-
-    if (
-      String(user._id) !==
-      String(req.user?._id)
-    ) {
-
-      return res.status(403).json({
-        success: false,
-        message:
-          "Face does not match logged in user"
-      });
-
-    }
-
-    const userId = user._id;
-
-    // =========================
-    // PREVENT DUPLICATE
-    // =========================
-
-    const existingAttendance =
-      await Attendance.findOne({
+      const {
         eventId,
-        userId
-      });
-
-    // =========================
-    // FIND EVENT
-    // =========================
-
-    const event =
-      await Event.findById(
-        eventId
-      );
-
-    if (!event) {
-
-      return res.status(404).json({
-        success: false,
-        message:
-          "Event not found"
-      });
-
-    }
-
-    // =========================
-    // FIND EVENT LOCATION
-    // =========================
-
-    const eventLocation =
-      await Location.findById(
-        event.locationId
-      );
-
-    if (!eventLocation) {
-
-      return res.status(404).json({
-        success: false,
-        message:
-          "Event location not found"
-      });
-
-    }
-
-    // =========================
-    // VALIDATE GPS
-    // =========================
-
-    const distance =
-      calculateDistance(
-        Number(lat),
-        Number(lng),
-        eventLocation.latitude,
-        eventLocation.longitude
-      );
-
-    const allowedRadius = 350;
-
-    if (distance > allowedRadius) {
-
-      return res.status(403).json({
-        success: false,
-        message:
-          "You are not within the event location"
-      });
-
-    }
-
-    console.log(
-      "DISTANCE:",
-      distance
-    );
-
-    // =========================
-    // DETERMINE STATUS
-    // =========================
-
-    const now = new Date();
-
-    const eventStart =
-      new Date(
-        `${event.date
-          .toISOString()
-          .split("T")[0]}T${event.time}:00`
-      );
-
-    const status =
-      now <= eventStart
-        ? "Present"
-        : "Late";
-
-    // =========================
-    // UPLOAD IMAGE
-    // =========================
-
-    const imageUrl =
-      await new Promise<string>((
-        resolve,
-        reject
-      ) => {
-
-        const stream =
-          cloudinary.uploader.upload_stream(
-            {
-              folder:
-                "attendance_faces"
-            },
-            (
-              error,
-              result
-            ) => {
-
-              if (error)
-                return reject(error);
-
-              resolve(
-                result?.secure_url || ""
-              );
-
-            }
-          );
-
-        stream.end(file.buffer);
-
-      });
-
-    // =========================
-    // TIME IN
-    // =========================
-
-    if (
-      attendanceType ===
-      "TIME_IN"
-    ) {
+        attendanceType
+      } = req.body;
 
       if (
-        existingAttendance?.timeIn
+        attendanceType !== "TIME_IN" &&
+        attendanceType !== "TIME_OUT"
+      ) {
+
+        return res.status(400).json({
+          success: false,
+          message:
+            "Invalid attendance type"
+        });
+
+      }
+
+      const lat =
+        parseFloat(req.body.lat);
+
+      const lng =
+        parseFloat(req.body.lng);
+
+      if (
+        isNaN(lat) ||
+        isNaN(lng)
+      ) {
+
+        return res.status(400).json({
+          success: false,
+          message:
+            "Invalid GPS coordinates"
+        });
+
+      }
+
+      if (!req.file) {
+
+        return res.status(400).json({
+          success: false,
+          message:
+            "Image required"
+        });
+
+      }
+
+      const file = req.file;
+
+
+
+      const base64Image =
+        file.buffer.toString(
+          "base64"
+        );
+
+      const flaskResponse =
+        await axios.post(
+          `${FLASK_API}/recognize`,
+          {
+            image:
+              `data:image/jpeg;base64,${base64Image}`
+          }
+        );
+
+      const recognizeData =
+        flaskResponse.data;
+
+      console.log(
+        "FLASK RESPONSE:",
+        recognizeData
+      );
+
+      if (!recognizeData.success) {
+
+        return res.status(401).json({
+          success: false,
+          message:
+            recognizeData.message ||
+            "Face not recognized"
+        });
+
+      }
+
+      const recognizedStudentId =
+        recognizeData.usn;
+
+      const confidence =
+        recognizeData.confidence;
+
+
+      if (confidence > 70) {
+
+        return res.status(401).json({
+          success: false,
+          message:
+            "Face confidence too low"
+        });
+
+      }
+
+      const user =
+        await User.findOne({
+          studentId:
+            recognizedStudentId
+        });
+
+      if (!user) {
+
+        return res.status(404).json({
+          success: false,
+          message:
+            "Recognized student not found"
+        });
+
+      }
+
+      if ( String(user._id) !== String(req.user?._id)){
+        return res.status(403).json({
+          success: false,
+          message: "Face does not match logged in user"
+        });
+
+      }
+
+      const userId = user._id;
+
+
+      const existingAttendance =
+        await Attendance.findOne({
+          eventId,
+          userId
+        });
+
+      // =========================
+      // FIND EVENT
+      // =========================
+
+      const event =
+        await Event.findById(
+          eventId
+        );
+
+      if (!event) {
+
+        return res.status(404).json({
+          success: false,
+          message:
+            "Event not found"
+        });
+
+      }
+
+
+      const eventLocation =
+        await Location.findById(
+          event.locationId
+        );
+
+      if (!eventLocation) {
+
+        return res.status(404).json({
+          success: false,
+          message:
+            "Event location not found"
+        });
+
+      }
+
+      const distance =
+        calculateDistance(
+          Number(lat),
+          Number(lng),
+          eventLocation.latitude,
+          eventLocation.longitude
+        );
+
+      const allowedRadius = 350;
+
+      if (distance > allowedRadius) {
+
+        return res.status(403).json({
+          success: false,
+          message:
+            "You are not within the event location"
+        });
+
+      }
+
+      console.log(
+        "DISTANCE:",
+        distance
+      );
+
+      // =========================
+      // DETERMINE STATUS
+      // =========================
+
+      const now = new Date();
+
+      const eventStart =
+        new Date(
+          `${event.date
+            .toISOString()
+            .split("T")[0]}T${event.time}:00`
+        );
+
+      const status =
+        now <= eventStart
+          ? "Present"
+          : "Late";
+
+      // =========================
+      // UPLOAD IMAGE
+      // =========================
+
+      const imageUrl =
+        await new Promise<string>((
+          resolve,
+          reject
+        ) => {
+
+          const stream =
+            cloudinary.uploader.upload_stream(
+              {
+                folder:
+                  "attendance_faces"
+              },
+              (
+                error,
+                result
+              ) => {
+
+                if (error)
+                  return reject(error);
+
+                resolve(
+                  result?.secure_url || ""
+                );
+
+              }
+            );
+
+          stream.end(file.buffer);
+
+        });
+
+      // =========================
+      // TIME IN
+      // =========================
+
+      if (
+        attendanceType ===
+        "TIME_IN"
+      ) {
+
+        if (
+          existingAttendance?.timeIn
+        ) {
+
+          return res.status(409).json({
+            success: false,
+            message:
+              "Time in already recorded"
+          });
+
+        }
+
+        const attendance =
+          await Attendance.create({
+            eventId,
+            userId,
+            faceToken: recognizedStudentId,
+            confidence,
+            status,
+            timeIn: now,
+            imageUrl
+
+          });
+
+        return res.status(201).json({
+
+          success: true,
+
+          type: "TIME_IN",
+
+          message:
+            "Time in recorded successfully",
+
+          attendance
+
+        });
+
+      }
+
+      // =========================
+      // TIME OUT
+      // =========================
+
+      if (!existingAttendance) {
+
+        return res.status(404).json({
+          success: false,
+          message:
+            "No existing time in record found"
+        });
+
+      }
+
+      if (
+        existingAttendance.timeOut
       ) {
 
         return res.status(409).json({
           success: false,
           message:
-            "Time in already recorded"
+            "Time out already recorded"
         });
 
       }
 
-      const attendance =
-        await Attendance.create({
+      existingAttendance.faceToken = recognizedStudentId;
 
-          eventId,
+      existingAttendance.timeOut = now;
 
-          userId,
+      existingAttendance.confidence = confidence;
 
-          confidence,
+      existingAttendance.imageUrl = imageUrl;
 
-          status,
+      await existingAttendance.save();
 
-          timeIn: now,
-
-          imageUrl
-
-        });
-
-      return res.status(201).json({
-
+      return res.status(200).json({
         success: true,
-
-        type: "TIME_IN",
-
-        message:
-          "Time in recorded successfully",
-
-        attendance
-
+        type: "TIME_OUT",
+        message: "Time out recorded successfully",
+        attendance:
+          existingAttendance
       });
 
-    }
+    } catch (error: any) {
 
-    // =========================
-    // TIME OUT
-    // =========================
+      console.error(
+        error?.response?.data ||
+        error.message
+      );
 
-    if (!existingAttendance) {
-
-      return res.status(404).json({
+      return res.status(500).json({
         success: false,
         message:
-          "No existing time in record found"
+          "Attendance recording failed"
       });
 
     }
-
-    if (
-      existingAttendance.timeOut
-    ) {
-
-      return res.status(409).json({
-        success: false,
-        message:
-          "Time out already recorded"
-      });
-
-    }
-
-    existingAttendance.timeOut =
-      now;
-
-    existingAttendance.confidence =
-      confidence;
-
-    existingAttendance.imageUrl =
-      imageUrl;
-
-    await existingAttendance.save();
-
-    return res.status(200).json({
-
-      success: true,
-
-      type: "TIME_OUT",
-
-      message:
-        "Time out recorded successfully",
-
-      attendance:
-        existingAttendance
-
-    });
-
-  } catch (error: any) {
-
-    console.error(
-      error?.response?.data ||
-      error.message
-    );
-
-    return res.status(500).json({
-      success: false,
-      message:
-        "Attendance recording failed"
-    });
 
   }
-
-}
 
   static async getEventAttendance(req: Request, res: Response) {
     try {
@@ -698,201 +650,201 @@ export class AttendanceController {
   }
 
   static async getStudentDashboardStats(
-  req: Request,
-  res: Response
-) {
+    req: Request,
+    res: Response
+  ) {
 
-  try {
+    try {
 
-    const userId = req.user?._id;
+      const userId = req.user?._id;
 
-    if (!userId) {
+      if (!userId) {
 
-      return res.status(401).json({
-        success: false,
-        message: "Unauthorized"
-      });
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized"
+        });
 
-    }
-
-    const userObjectId =
-      new mongoose.Types.ObjectId(userId);
-
-    /* TOTAL ATTENDANCE */
-
-    const totalAttendance =
-      await Attendance.countDocuments({
-        userId: userObjectId
-      });
-
-    /* EVENTS JOINED */
-
-    const eventsJoined =
-      await Attendance.distinct(
-        "eventId",
-        {
-          userId: userObjectId
-        }
-      );
-
-    /* MISSED EVENTS */
-
-    const missedEvents =
-      await Event.countDocuments({
-
-        status: "Completed",
-
-        _id: {
-          $nin: eventsJoined
-        }
-
-      });
-
-    /* UPCOMING EVENTS */
-
-    const upcomingEventsCount =
-      await Event.countDocuments({
-        status: "Upcoming"
-      });
-
-    return res.status(200).json({
-
-      success: true,
-
-      stats: {
-
-        attendanceCount:
-          totalAttendance,
-
-        eventsJoinedCount:
-          eventsJoined.length,
-
-        missedEventsCount:
-          missedEvents,
-
-        upcomingEventsCount:
-          upcomingEventsCount
       }
 
-    });
+      const userObjectId =
+        new mongoose.Types.ObjectId(userId);
 
-  } catch (error) {
+      /* TOTAL ATTENDANCE */
 
-    console.error(error);
+      const totalAttendance =
+        await Attendance.countDocuments({
+          userId: userObjectId
+        });
 
-    return res.status(500).json({
-      success: false,
-      message:
-        "Failed to fetch dashboard stats"
-    });
+      /* EVENTS JOINED */
 
-  }
-}
+      const eventsJoined =
+        await Attendance.distinct(
+          "eventId",
+          {
+            userId: userObjectId
+          }
+        );
 
-static async getMyAttendanceHistory(
-  req: Request,
-  res: Response
-) {
+      /* MISSED EVENTS */
 
-  try {
+      const missedEvents =
+        await Event.countDocuments({
 
-    const userId = req.user?._id;
+          status: "Completed",
 
-    if (!userId) {
+          _id: {
+            $nin: eventsJoined
+          }
 
-      return res.status(401).json({
+        });
+
+      /* UPCOMING EVENTS */
+
+      const upcomingEventsCount =
+        await Event.countDocuments({
+          status: "Upcoming"
+        });
+
+      return res.status(200).json({
+
+        success: true,
+
+        stats: {
+
+          attendanceCount:
+            totalAttendance,
+
+          eventsJoinedCount:
+            eventsJoined.length,
+
+          missedEventsCount:
+            missedEvents,
+
+          upcomingEventsCount:
+            upcomingEventsCount
+        }
+
+      });
+
+    } catch (error) {
+
+      console.error(error);
+
+      return res.status(500).json({
         success: false,
-        message: "Unauthorized"
+        message:
+          "Failed to fetch dashboard stats"
       });
 
     }
-
-    const userObjectId =
-      new mongoose.Types.ObjectId(userId);
-
-    const attendance =
-      await Attendance.aggregate([
-
-        {
-          $match: {
-            userId: userObjectId
-          }
-        },
-
-        {
-          $lookup: {
-            from: "events",
-            localField: "eventId",
-            foreignField: "_id",
-            as: "event"
-          }
-        },
-
-        {
-          $unwind: "$event"
-        },
-
-        {
-          $project: {
-
-            _id: 1,
-
-            status: 1,
-
-            timeIn: 1,
-
-            timeOut: 1,
-
-            imageUrl: 1,
-
-            confidence: 1,
-
-            createdAt: 1,
-
-            event: {
-              _id: "$event._id",
-              title: "$event.title",
-              description:
-                "$event.description",
-              venue: "$event.venue",
-              date: "$event.date",
-              time: "$event.time",
-              status: "$event.status",
-              department:
-                "$event.department"
-            }
-
-          }
-        },
-
-        {
-          $sort: {
-            createdAt: -1
-          }
-        }
-
-      ]);
-
-    return res.status(200).json({
-
-      success: true,
-
-      total: attendance.length,
-
-      attendance
-
-    });
-
-  } catch (error) {
-
-    console.error(error);
-
-    return res.status(500).json({
-      success: false,
-      message:
-        "Failed to fetch attendance history"
-    });
-
   }
-}
+
+  static async getMyAttendanceHistory(
+    req: Request,
+    res: Response
+  ) {
+
+    try {
+
+      const userId = req.user?._id;
+
+      if (!userId) {
+
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized"
+        });
+
+      }
+
+      const userObjectId =
+        new mongoose.Types.ObjectId(userId);
+
+      const attendance =
+        await Attendance.aggregate([
+
+          {
+            $match: {
+              userId: userObjectId
+            }
+          },
+
+          {
+            $lookup: {
+              from: "events",
+              localField: "eventId",
+              foreignField: "_id",
+              as: "event"
+            }
+          },
+
+          {
+            $unwind: "$event"
+          },
+
+          {
+            $project: {
+
+              _id: 1,
+
+              status: 1,
+
+              timeIn: 1,
+
+              timeOut: 1,
+
+              imageUrl: 1,
+
+              confidence: 1,
+
+              createdAt: 1,
+
+              event: {
+                _id: "$event._id",
+                title: "$event.title",
+                description:
+                  "$event.description",
+                venue: "$event.venue",
+                date: "$event.date",
+                time: "$event.time",
+                status: "$event.status",
+                department:
+                  "$event.department"
+              }
+
+            }
+          },
+
+          {
+            $sort: {
+              createdAt: -1
+            }
+          }
+
+        ]);
+
+      return res.status(200).json({
+
+        success: true,
+
+        total: attendance.length,
+
+        attendance
+
+      });
+
+    } catch (error) {
+
+      console.error(error);
+
+      return res.status(500).json({
+        success: false,
+        message:
+          "Failed to fetch attendance history"
+      });
+
+    }
+  }
 }

@@ -3,7 +3,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import userRoutes from "./modules/User/user.Routes"
 import eventRoutes from "./modules/Event/event.routes"
-import faceRoutes from "./modules/Face/face.routes"
+//import faceRoutes from "./modules/Face/face.routes"
 import locationRoutes from "./modules/Location/location.routes"
 import departmentRoutes from "./modules/Department/department.routes"
 import attendanceRoutes from "./modules/Attendance/attendance.routes"

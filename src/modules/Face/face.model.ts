@@ -5,17 +5,11 @@ import mongoose, {
 
 export interface IFaceUser
   extends Document {
-
   userId: string;
-
   name: string;
-
   faceUrl: string;
-
   cloudinaryId: string;
-
   createdAt: Date;
-
   updatedAt: Date;
 }
 
