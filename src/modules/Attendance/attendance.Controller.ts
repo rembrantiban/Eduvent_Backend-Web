@@ -55,22 +55,17 @@ export class AttendanceController {
           message:
             "Invalid GPS coordinates"
         });
-
       }
 
       if (!req.file) {
-
         return res.status(400).json({
           success: false,
           message:
             "Image required"
         });
-
       }
 
       const file = req.file;
-
-
 
       const base64Image =
         file.buffer.toString(
@@ -134,7 +129,15 @@ export class AttendanceController {
         }))
       );
 
-      const user = await User.findOne({ studentId: recognizedStudentId });
+      const user =
+  await User.findOne({
+    studentId: {
+      $regex: new RegExp(
+        `^${recognizedStudentId.trim()}$`,
+        "i"
+      )
+    }
+  });
       console.log("FOUND USER:", user);
 
       if (!user) {
