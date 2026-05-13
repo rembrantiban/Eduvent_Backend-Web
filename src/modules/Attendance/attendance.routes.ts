@@ -1,6 +1,6 @@
 import { Router } from "express";
 import multer from "multer";
-import { AttendanceController} from "./attendance.Controller";
+import { AttendanceController } from "./attendance.Controller";
 import MobileAuth from "../../middleware/AuthCookieMiddleware"
 
 const router = Router();

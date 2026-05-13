@@ -14,63 +14,79 @@ import FLASK_API from "../../config/flask";
 console.log("ATTENDANCE CONTROLLER HIT");
 export class AttendanceController {
 
-  static async recordAttendance(
-    req: Request,
-    res: Response
-  ) {
-    console.log("ATTENDANCE CONTROLLER HIT");
+static async recordAttendance(
+  req: Request,
+  res: Response
+) {
+
+  console.log(
+    "ATTENDANCE CONTROLLER HIT"
+  );
+
+  try {
+
+    // =========================
+    // REQUEST DATA
+    // =========================
+
+    const {
+      eventId,
+      attendanceType
+    } = req.body;
+
+    if (
+      attendanceType !== "TIME_IN" &&
+      attendanceType !== "TIME_OUT"
+    ) {
+
+      return res.status(400).json({
+        success: false,
+        message:
+          "Invalid attendance type"
+      });
+
+    }
+
+    const lat = parseFloat(req.body.lat);
+
+    const lng = parseFloat(req.body.lng);
+
+    if (
+      isNaN(lat) ||
+      isNaN(lng)
+    ) {
+
+      return res.status(400).json({
+        success: false,
+        message:
+          "Invalid GPS coordinates"
+      });
+
+    }
+
+    if (!req.file) {
+
+      return res.status(400).json({
+        success: false,
+        message: "Image required"
+      });
+
+    }
+
+    const file = req.file;
+
+    // =========================
+    // SEND IMAGE TO FLASK
+    // =========================
+
+    const base64Image =
+      file.buffer.toString(
+        "base64"
+      );
+
+    let recognizeData;
+
     try {
-
-      const {
-        eventId,
-        attendanceType
-      } = req.body;
-
-      if (
-        attendanceType !== "TIME_IN" &&
-        attendanceType !== "TIME_OUT"
-      ) {
-
-        return res.status(400).json({
-          success: false,
-          message:
-            "Invalid attendance type"
-        });
-
-      }
-
-      const lat =
-        parseFloat(req.body.lat);
-
-      const lng =
-        parseFloat(req.body.lng);
-
-      if (
-        isNaN(lat) ||
-        isNaN(lng)
-      ) {
-
-        return res.status(400).json({
-          success: false,
-          message:
-            "Invalid GPS coordinates"
-        });
-      }
-
-      if (!req.file) {
-        return res.status(400).json({
-          success: false,
-          message:
-            "Image required"
-        });
-      }
-
-      const file = req.file;
-
-      const base64Image =
-        file.buffer.toString(
-          "base64"
-        );
 
       const flaskResponse =
         await axios.post(
@@ -81,7 +97,7 @@ export class AttendanceController {
           }
         );
 
-      const recognizeData =
+      recognizeData =
         flaskResponse.data;
 
       console.log(
@@ -89,298 +105,426 @@ export class AttendanceController {
         recognizeData
       );
 
-      if (!recognizeData.success) {
-
-        return res.status(401).json({
-          success: false,
-          message:
-            recognizeData.message ||
-            "Face not recognized"
-        });
-
-      }
-
-      const recognizedStudentId =
-        recognizeData.usn
-          ?.trim()
-          ?.toLowerCase();
-
-      console.log("RECOGNIZED STUDENT:", JSON.stringify(recognizedStudentId));
-
-      const confidence = recognizeData.confidence;
-      if (confidence > 50) {
-
-        return res.status(401).json({
-          success: false,
-          message:
-            "Face confidence too low"
-        });
-
-      }
-
-      const allUsers = await User.find();
-      console.log("ALL USERS:",
-        allUsers.map(u => ({
-          dbStudentId:
-            JSON.stringify(
-              u.studentId
-            ),
-          dbId: u._id
-        }))
-      );
-
-      const user =
-        await User.findOne({
-          studentId: {
-            $regex: new RegExp(
-              `^${recognizedStudentId.trim()}$`,
-              "i"
-            )
-          }
-        });
-      console.log("FOUND USER:", user);
-
-      if (!user) {
-
-        return res.status(404).json({
-          success: false,
-          message:
-            "Recognized student not found"
-        });
-
-      }
-
-      if (String(user._id) !== String(req.user?._id)) {
-        return res.status(403).json({
-          success: false,
-          message: "Face does not match logged in user"
-        });
-
-      }
-
-      const userId = user._id;
-
-      const existingAttendance =
-        await Attendance.findOne({
-          eventId,
-          userId
-        });
-
-      const event =
-        await Event.findById(
-          eventId
-        );
-
-      if (!event) {
-
-        return res.status(404).json({
-          success: false,
-          message:
-            "Event not found"
-        });
-
-      }
-
-
-      const eventLocation =
-        await Location.findById(
-          event.locationId
-        );
-
-      if (!eventLocation) {
-
-        return res.status(404).json({
-          success: false,
-          message:
-            "Event location not found"
-        });
-
-      }
-
-      const distance =
-        calculateDistance(
-          Number(lat),
-          Number(lng),
-          eventLocation.latitude,
-          eventLocation.longitude
-        );
-
-      const allowedRadius = 350;
-
-      if (distance > allowedRadius) {
-
-        return res.status(403).json({
-          success: false,
-          message:
-            "You are not within the event location"
-        });
-
-      }
+    } catch (error: any) {
 
       console.log(
-        "DISTANCE:",
-        distance
+        "FLASK ERROR:",
+        error?.response?.data
       );
 
-      const now = new Date();
+      return res.status(401).json({
+        success: false,
+        message:
+          error?.response?.data?.message ||
+          "Face recognition failed"
+      });
 
-      const eventStart =
-        new Date(
-          `${event.date
-            .toISOString()
-            .split("T")[0]}T${event.time}:00`
+    }
+
+    // =========================
+    // VALIDATE RECOGNITION
+    // =========================
+
+    if (!recognizeData?.success) {
+
+      return res.status(401).json({
+        success: false,
+        message:
+          recognizeData?.message ||
+          "Face not recognized"
+      });
+
+    }
+
+    const recognizedStudentId =
+      String(
+        recognizeData.usn || ""
+      )
+        .trim()
+        .toLowerCase();
+
+    const confidence =
+      Number(
+        recognizeData.confidence
+      );
+
+    console.log(
+      "RECOGNIZED STUDENT:",
+      recognizedStudentId
+    );
+
+    console.log(
+      "CONFIDENCE:",
+      confidence
+    );
+
+    if (!recognizedStudentId) {
+
+      return res.status(401).json({
+        success: false,
+        message:
+          "Invalid recognized student"
+      });
+
+    }
+
+    // LOWER = BETTER
+    if (confidence > 70) {
+
+      return res.status(401).json({
+        success: false,
+        message:
+          "Face confidence too low"
+      });
+
+    }
+
+    // =========================
+    // FIND USER
+    // =========================
+
+    const user =
+      await User.findOne({
+        studentId:
+          recognizedStudentId
+      });
+
+    console.log(
+      "FOUND USER:",
+      user?._id
+    );
+
+    if (!user) {
+
+      return res.status(404).json({
+        success: false,
+        message:
+          "Recognized student not found"
+      });
+
+    }
+
+    // =========================
+    // SECURITY CHECK
+    // =========================
+
+    if (
+      String(user._id) !==
+      String(req.user?._id)
+    ) {
+
+      console.log(
+        "FACE MISMATCH"
+      );
+
+      console.log(
+        "LOGGED IN USER:",
+        req.user?._id
+      );
+
+      console.log(
+        "FACE OWNER:",
+        user._id
+      );
+
+      return res.status(403).json({
+        success: false,
+        message:
+          "Face does not match logged in user"
+      });
+
+    }
+
+    const userId = user._id;
+
+    // =========================
+    // FIND EVENT
+    // =========================
+
+    const event =
+      await Event.findById(
+        eventId
+      );
+
+    if (!event) {
+
+      return res.status(404).json({
+        success: false,
+        message:
+          "Event not found"
+      });
+
+    }
+
+    // =========================
+    // FIND LOCATION
+    // =========================
+
+    const eventLocation =
+      await Location.findById(
+        event.locationId
+      );
+
+    if (!eventLocation) {
+
+      return res.status(404).json({
+        success: false,
+        message:
+          "Event location not found"
+      });
+
+    }
+
+    // =========================
+    // GPS VALIDATION
+    // =========================
+
+    const distance =
+      calculateDistance(
+        Number(lat),
+        Number(lng),
+        eventLocation.latitude,
+        eventLocation.longitude
+      );
+
+    console.log(
+      "DISTANCE:",
+      distance
+    );
+
+    const allowedRadius = 350;
+
+    if (distance > allowedRadius) {
+
+      return res.status(403).json({
+        success: false,
+        message:
+          "You are not within the event location"
+      });
+
+    }
+
+    // =========================
+    // CHECK EXISTING ATTENDANCE
+    // =========================
+
+    const existingAttendance =
+      await Attendance.findOne({
+        eventId,
+        userId
+      });
+
+    const now = new Date();
+
+    const eventStart =
+      new Date(
+        `${event.date
+          .toISOString()
+          .split("T")[0]}T${event.time}:00`
+      );
+
+    const status =
+      now <= eventStart
+        ? "Present"
+        : "Late";
+
+    // =========================
+    // UPLOAD IMAGE
+    // =========================
+
+    const imageUrl =
+      await new Promise<string>((
+        resolve,
+        reject
+      ) => {
+
+        const stream =
+          cloudinary.uploader.upload_stream(
+            {
+              folder:
+                "attendance_faces"
+            },
+            (
+              error,
+              result
+            ) => {
+
+              if (error) {
+                return reject(error);
+              }
+
+              resolve(
+                result?.secure_url || ""
+              );
+
+            }
+          );
+
+        stream.end(
+          file.buffer
         );
 
-      const status =
-        now <= eventStart
-          ? "Present"
-          : "Late";
+      });
 
-      // =========================
-      // UPLOAD IMAGE
-      // =========================
+    // =========================
+    // TIME IN
+    // =========================
 
-      const imageUrl =
-        await new Promise<string>((
-          resolve,
-          reject
-        ) => {
-
-          const stream =
-            cloudinary.uploader.upload_stream(
-              {
-                folder:
-                  "attendance_faces"
-              },
-              (
-                error,
-                result
-              ) => {
-
-                if (error)
-                  return reject(error);
-
-                resolve(
-                  result?.secure_url || ""
-                );
-
-              }
-            );
-
-          stream.end(file.buffer);
-
-        });
-
-      // =========================
-      // TIME IN
-      // =========================
+    if (
+      attendanceType ===
+      "TIME_IN"
+    ) {
 
       if (
-        attendanceType ===
-        "TIME_IN"
-      ) {
-
-        if (
-          existingAttendance?.timeIn
-        ) {
-
-          return res.status(409).json({
-            success: false,
-            message:
-              "Time in already recorded"
-          });
-
-        }
-
-        const attendance =
-          await Attendance.create({
-            eventId,
-            userId,
-            faceToken: recognizedStudentId,
-            confidence,
-            status,
-            timeIn: now,
-            imageUrl
-
-          });
-
-        return res.status(201).json({
-
-          success: true,
-          type: "TIME_IN",
-          message:
-            "Time in recorded successfully",
-          attendance
-
-        });
-
-      }
-
-      // =========================
-      // TIME OUT
-      // =========================
-
-      if (!existingAttendance) {
-
-        return res.status(404).json({
-          success: false,
-          message:
-            "No existing time in record found"
-        });
-
-      }
-
-      if (
-        existingAttendance.timeOut
+        existingAttendance?.timeIn
       ) {
 
         return res.status(409).json({
           success: false,
           message:
-            "Time out already recorded"
+            "Time in already recorded"
         });
 
       }
 
-      existingAttendance.faceToken = recognizedStudentId;
+      const attendance =
+        await Attendance.create({
 
-      existingAttendance.timeOut = now;
+          eventId,
 
-      existingAttendance.confidence = confidence;
+          userId,
 
-      existingAttendance.imageUrl = imageUrl;
+          faceToken:
+            recognizedStudentId,
 
-      await existingAttendance.save();
+          confidence,
 
-      return res.status(200).json({
+          status,
+
+          timeIn: now,
+
+          imageUrl
+
+        });
+
+      return res.status(201).json({
+
         success: true,
-        type: "TIME_OUT",
-        message: "Time out recorded successfully",
-        attendance:
-          existingAttendance
-      });
 
-    } catch (error: any) {
+        type: "TIME_IN",
 
-      console.log("=========== ERROR START ===========");
-      console.log(error);
-      console.log("MESSAGE:");
-      console.log(error?.message);
-      console.log("RESPONSE:");
-      console.log(error?.response?.data);
-      console.log("STACK:");
-      console.log(error?.stack);
-      console.log("=========== ERROR END ===========");
-      return res.status(500).json({
-        success: false,
         message:
-          error?.message ||
-          "Attendance recording failed"
+          "Time in recorded successfully",
+
+        attendance
+
       });
 
     }
 
+    // =========================
+    // TIME OUT
+    // =========================
+
+    if (!existingAttendance) {
+
+      return res.status(404).json({
+        success: false,
+        message:
+          "No existing time in record found"
+      });
+
+    }
+
+    if (
+      existingAttendance.timeOut
+    ) {
+
+      return res.status(409).json({
+        success: false,
+        message:
+          "Time out already recorded"
+      });
+
+    }
+
+    existingAttendance.faceToken =
+      recognizedStudentId;
+
+    existingAttendance.timeOut =
+      now;
+
+    existingAttendance.confidence =
+      confidence;
+
+    existingAttendance.imageUrl =
+      imageUrl;
+
+    await existingAttendance.save();
+
+    return res.status(200).json({
+
+      success: true,
+
+      type: "TIME_OUT",
+
+      message:
+        "Time out recorded successfully",
+
+      attendance:
+        existingAttendance
+
+    });
+
+  } catch (error: any) {
+
+    console.log(
+      "=========== ERROR START ==========="
+    );
+
+    console.log(error);
+
+    console.log(
+      "MESSAGE:"
+    );
+
+    console.log(
+      error?.message
+    );
+
+    console.log(
+      "RESPONSE:"
+    );
+
+    console.log(
+      error?.response?.data
+    );
+
+    console.log(
+      "STACK:"
+    );
+
+    console.log(
+      error?.stack
+    );
+
+    console.log(
+      "=========== ERROR END ==========="
+    );
+
+    return res.status(500).json({
+
+      success: false,
+
+      message:
+        error?.message ||
+        "Attendance recording failed"
+
+    });
+
   }
+
+}
 
   static async getEventAttendance(req: Request, res: Response) {
     try {
