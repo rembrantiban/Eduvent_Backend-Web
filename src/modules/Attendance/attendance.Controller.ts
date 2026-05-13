@@ -138,7 +138,7 @@ export class AttendanceController {
 
       }
 
-      if ( String(user._id) !== String(req.user?._id)){
+      if (String(user._id) !== String(req.user?._id)) {
         return res.status(403).json({
           success: false,
           message: "Face does not match logged in user"
@@ -362,14 +362,19 @@ export class AttendanceController {
 
     } catch (error: any) {
 
-      console.error(
-        error?.response?.data ||
-        error.message
-      );
-
+      console.log("=========== ERROR START ===========");
+      console.log(error);
+      console.log("MESSAGE:");
+      console.log(error?.message);
+      console.log("RESPONSE:");
+      console.log(error?.response?.data);
+      console.log("STACK:");
+      console.log(error?.stack);
+      console.log("=========== ERROR END ===========");
       return res.status(500).json({
         success: false,
         message:
+          error?.message ||
           "Attendance recording failed"
       });
 
