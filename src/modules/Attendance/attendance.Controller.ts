@@ -130,14 +130,14 @@ export class AttendanceController {
       );
 
       const user =
-  await User.findOne({
-    studentId: {
-      $regex: new RegExp(
-        `^${recognizedStudentId.trim()}$`,
-        "i"
-      )
-    }
-  });
+        await User.findOne({
+          studentId: {
+            $regex: new RegExp(
+              `^${recognizedStudentId.trim()}$`,
+              "i"
+            )
+          }
+        });
       console.log("FOUND USER:", user);
 
       if (!user) {
