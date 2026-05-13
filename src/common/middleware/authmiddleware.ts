@@ -7,7 +7,6 @@ export const requireAuth = async (
   res: Response,
   next: NextFunction
 ) => {
-  // 🔥 HEADER ONLY
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
