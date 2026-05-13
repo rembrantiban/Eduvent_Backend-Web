@@ -84,7 +84,6 @@ export class FaceController {
     const faceUser = await FaceUser.create({
       userId,
       name,
-      faceToken
     });
 
     await User.findByIdAndUpdate(userId, {
