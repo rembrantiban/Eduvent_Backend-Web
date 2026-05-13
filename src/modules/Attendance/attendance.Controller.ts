@@ -10,8 +10,6 @@ import { User } from "../../modules/User/user.Model"
 import axios from "axios";
 import FLASK_API from "../../config/flask";
 
-
-console.log("ATTENDANCE CONTROLLER HIT");
 export class AttendanceController {
 
   static async recordAttendance(
@@ -25,9 +23,6 @@ export class AttendanceController {
 
     try {
 
-      // =========================
-      // REQUEST DATA
-      // =========================
 
       const {
         eventId,
@@ -96,14 +91,12 @@ export class AttendanceController {
                 `data:image/jpeg;base64,${base64Image}`
             }
           );
+          console.log( "ABOUT TO CALL FLASK");
 
         recognizeData =
           flaskResponse.data;
 
-        console.log(
-          "FLASK RESPONSE:",
-          recognizeData
-        );
+        console.log( "FLASK RESPONSE:",recognizeData);
 
       } catch (error: any) {
 
@@ -120,10 +113,6 @@ export class AttendanceController {
         });
 
       }
-
-      // =========================
-      // VALIDATE RECOGNITION
-      // =========================
 
       if (!recognizeData?.success) {
 
