@@ -158,7 +158,7 @@ export class AttendanceController {
       }
 
       // LOWER = BETTER
-      if (confidence > 70) {
+      if (confidence > 110) {
 
         return res.status(401).json({
           success: false,
