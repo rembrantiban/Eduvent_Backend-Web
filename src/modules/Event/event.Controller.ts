@@ -356,30 +356,32 @@ export const getStudentEvents = async (
 
     })
 
-      .select(
-        `
+      .select(`
         title
         description
-        venue
         date
         time
-        endtime
+        endTime
         status
-        banner
+        imageUrl
         locationId
-        `
-      )
+      `)
 
       .populate({
         path: "locationId",
-        select: "name latitude longitude",
+        select: `
+    venue
+    location
+    latitude
+    longitude
+  `,
       })
+
       .sort({
         date: 1,
       })
 
       .lean();
-
     return res.status(200).json({
 
       success: true,
@@ -402,6 +404,7 @@ export const getStudentEvents = async (
   }
 
 };
+
 export const updateEvent = async (
   req: Request,
   res: Response
