@@ -307,17 +307,23 @@ export const getStudentEvents = async (
   req: Request,
   res: Response
 ) => {
+
   try {
+
     const user = req.user;
 
     if (!user) {
+
       return res.status(401).json({
         message: "Unauthorized",
       });
+
     }
 
     const events = await Event.find({
+
       $or: [
+
         {
           isForAllStudents: true,
         },
@@ -328,38 +334,62 @@ export const getStudentEvents = async (
           },
         },
 
-        /* MAJOR */
         {
           targetMajors: {
             $in: [user.major],
           },
         },
 
-        /* YEAR LEVEL */
         {
           targetYearLevels: {
             $in: [user.yearLevel],
           },
         },
 
-        /* SECTION */
         {
           targetSections: {
             $in: [user.section],
           },
         },
+
       ],
+
     })
-      .populate("locationId")
+
+      .select(
+        `
+        title
+        description
+        venue
+        date
+        time
+        endtime
+        status
+        banner
+        locationId
+        `
+      )
+
+      .populate({
+        path: "locationId",
+        select: "name latitude longitude",
+      })
       .sort({
         date: 1,
-      });
+      })
+
+      .lean();
 
     return res.status(200).json({
+
       success: true,
+
       data: events,
+
     });
+
   } catch (error) {
+
     console.error(
       "Error fetching student events",
       error
@@ -368,9 +398,10 @@ export const getStudentEvents = async (
     return res.status(500).json({
       message: "Server error",
     });
-  }
-};
 
+  }
+
+};
 export const updateEvent = async (
   req: Request,
   res: Response
