@@ -3,7 +3,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import userRoutes from "./modules/User/user.Routes"
 import eventRoutes from "./modules/Event/event.routes"
-//import faceRoutes from "./modules/Face/face.routes"
+import mongoose from "mongoose";
 import locationRoutes from "./modules/Location/location.routes"
 import departmentRoutes from "./modules/Department/department.routes"
 import attendanceRoutes from "./modules/Attendance/attendance.routes"
@@ -13,15 +13,12 @@ const app = express();
 
 app.set("trust proxy", 1);
 app.get("/api/health", (req, res) => {
- try {
-    const dbReady = true;
-    res.status(200).json({
-      status: "OK",
-      db: dbReady
-    });
-  } catch {
-    res.status(500).json({ status: "ERROR" });
-  }
+  const dbReady = mongoose.connection.readyState === 1;
+
+  res.status(dbReady ? 200 : 500).json({
+    status: dbReady ? "OK" : "ERROR",
+    db: dbReady,
+  });
 });
 
 app.use(cors(
