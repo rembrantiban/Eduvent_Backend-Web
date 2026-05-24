@@ -1,8 +1,9 @@
 import { Request, Response } from "express";
 import mongoose from "mongoose";
 
-import { Attendance } from "./attendance.Model"
+import { Attendance } from "./attendance.Model";
 import { Event } from "../Event/event.Model";
+import { User } from "../User/user.Model";
 
 export const getAttendanceAnalytics = async (
   req: Request,
@@ -27,23 +28,96 @@ export const getAttendanceAnalytics = async (
       });
     }
 
-    const attendance = await Attendance.find({
-      eventId,
-    });
+    /*
+      STEP 1:
+      Get all students eligible for this event
+    */
 
-    const present = attendance.filter(
+    let eligibleUsers = [];
+
+    if (event.isForAllStudents) {
+      eligibleUsers = await User.find({
+        user_type: "student",
+      });
+    } else {
+      eligibleUsers = await User.find({
+        user_type: "student",
+
+        ...(event.targetDepartments?.length && {
+          department: {
+            $in: event.targetDepartments,
+          },
+        }),
+
+        ...(event.targetMajors?.length && {
+          major: {
+            $in: event.targetMajors,
+          },
+        }),
+
+        ...(event.targetYearLevels?.length && {
+          yearLevel: {
+            $in: event.targetYearLevels,
+          },
+        }),
+
+        ...(event.targetSections?.length && {
+          section: {
+            $in: event.targetSections,
+          },
+        }),
+      });
+    }
+
+    /*
+      STEP 2:
+      Get attendance records
+    */
+
+    const attendanceRecords =
+      await Attendance.find({
+        eventId,
+      });
+
+    /*
+      STEP 3:
+      Count statuses
+    */
+
+    const present = attendanceRecords.filter(
       (a) => a.status === "Present"
     ).length;
 
-    const late = attendance.filter(
+    const late = attendanceRecords.filter(
       (a) => a.status === "Late"
     ).length;
 
-    const absent = attendance.filter(
-      (a) => a.status === "Absent"
-    ).length;
+    /*
+      STEP 4:
+      Absent = eligible users NOT in attendance
+    */
 
-    const total = present + late + absent;
+    const attendedUserIds = attendanceRecords.map(
+      (a) => a.userId.toString()
+    );
+
+    const absentUsers = eligibleUsers.filter(
+      (user) =>
+        !attendedUserIds.includes(
+          user._id.toString()
+        )
+    );
+
+    const absent = absentUsers.length;
+
+    const total = eligibleUsers.length;
+
+    const attendanceRate =
+      total > 0
+        ? Math.round(
+            ((present + late) / total) * 100
+          )
+        : 0;
 
     res.status(200).json({
       success: true,
@@ -60,13 +134,7 @@ export const getAttendanceAnalytics = async (
         present,
         late,
         absent,
-
-        attendanceRate:
-          total > 0
-            ? Math.round(
-                ((present + late) / total) * 100
-              )
-            : 0,
+        attendanceRate,
       },
 
       chartData: [
@@ -83,6 +151,8 @@ export const getAttendanceAnalytics = async (
           value: absent,
         },
       ],
+
+      absentUsers,
     });
   } catch (error) {
     console.log(error);
