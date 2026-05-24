@@ -1,8 +1,9 @@
 import { Router } from "express";
 import multer from "multer";
 import { AttendanceController } from "./attendance.Controller";
+import { getAttendanceAnalytics } from "./attendance.analytics.controller"
 import MobileAuth from "../../middleware/AuthCookieMiddleware"
-
+import { requireAuth } from "../../common/middleware/authmiddleware";
 const router = Router();
 
 const upload = multer({
@@ -24,5 +25,6 @@ router.get("/get-events-with-attendance", AttendanceController.getEventsWithAtte
 router.get("/get-all-attendance-ongoing", MobileAuth, AttendanceController.getAllAttendanceOngoing);
 router.get("/my-attendance-history", MobileAuth, AttendanceController.getMyAttendanceHistory);
 router.get("/dashboard-stats", MobileAuth, AttendanceController.getStudentDashboardStats);
+router.get("/analytics/:eventId", requireAuth, getAttendanceAnalytics);
 
 export default router;

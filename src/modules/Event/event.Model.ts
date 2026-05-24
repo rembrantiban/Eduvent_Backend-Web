@@ -12,34 +12,22 @@ export enum EventStatus {
 
 export interface IEvent extends Document {
   imageUrl?: string;
-
   title: string;
-
   description: string;
-
   date: Date;
-
   time: string;
-
   endTime: string;
-
   status: EventStatus;
 
   /* TARGETING */
   targetDepartments?: string[];
-
   targetYearLevels?: string[];
-
   targetMajors?: string[];
-
   targetSections?: string[];
-
   isForAllStudents: boolean;
 
   locationId: mongoose.Types.ObjectId;
-
   createdAt: Date;
-
   updatedAt: Date;
 }
 
