@@ -37,11 +37,11 @@ export const getAttendanceAnalytics = async (
 
     if (event.isForAllStudents) {
       eligibleUsers = await User.find({
-        user_type: "student",
+        role: "student",
       });
     } else {
       eligibleUsers = await User.find({
-        user_type: "student",
+        role: "student",
 
         ...(event.targetDepartments?.length && {
           department: {
