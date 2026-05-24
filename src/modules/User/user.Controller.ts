@@ -338,6 +338,7 @@ export const updateUser = async (req: Request, res: Response) => {
       email,
       role,
       department,
+      major,
       studentId,
       yearLevel,
       section,
@@ -420,6 +421,7 @@ export const updateUser = async (req: Request, res: Response) => {
       updateData.studentId = studentId;
       updateData.yearLevel = yearLevel;
       updateData.section = section;
+      updateData.major = major;
     }
 
 
