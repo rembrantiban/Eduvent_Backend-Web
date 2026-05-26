@@ -851,7 +851,7 @@ export class AttendanceController {
       const missedEvents =
         await Event.countDocuments({
 
-          status: "Completed",
+          status: "Finished",
 
           _id: {
             $nin: eventsJoined
