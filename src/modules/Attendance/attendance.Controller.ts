@@ -1007,10 +1007,7 @@ export class AttendanceController {
     }
   }
 
-  static async getStudentAttendanceAnalytics(
-  req: Request,
-  res: Response
-) {
+  static async getStudentAttendanceAnalytics( req: Request, res: Response ) {
   try {
 
     const userId = req.user?._id;
@@ -1116,4 +1113,161 @@ export class AttendanceController {
     });
   }
 }
+
+ static async getRecentActivity( req: Request, res: Response){
+
+    try {
+      const userId = req.user?._id;
+
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized",
+        });
+      }
+
+      const user =
+        await User.findById(userId);
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: "User not found",
+        });
+
+      }
+      const startOfDay = new Date();
+      startOfDay.setHours(
+        0,
+        0,
+        0,
+        0
+      );
+
+      const endOfDay = new Date();
+      endOfDay.setHours(
+        23,
+        59,
+        59,
+        999
+      );
+
+      const attendance =
+        await Attendance.find({
+
+          userId:
+            new mongoose.Types.ObjectId(
+              userId
+            ),
+
+          createdAt: {
+
+            $gte: startOfDay,
+
+            $lte: endOfDay,
+          },
+
+        })
+          .populate("eventId")
+          .sort({
+            createdAt: -1,
+          })
+          .limit(5);
+
+
+      const attendanceActivities =
+        attendance.map(
+          (item: any) => ({
+
+            id:
+              `${item._id}-attendance`,
+
+            title:
+              item.status === "Late"
+                ? "Checked in late"
+                : "Checked in successfully",
+
+            subtitle:
+              item.eventId?.title ||
+              "Unknown Event",
+
+            time:
+              item.createdAt,
+
+            icon:
+              item.status === "Late"
+                ? "time-outline"
+                : "checkmark-circle-outline",
+
+            color:
+              item.status === "Late"
+                ? "#f59e0b"
+                : "#16a34a",
+
+          })
+        );
+
+      let verificationActivities:
+        any[] = [];
+
+      if (
+        user.isFaceRegistered &&
+        user.updatedAt >= startOfDay &&
+        user.updatedAt <= endOfDay
+      ) {
+
+        verificationActivities = [
+
+          {
+
+            id:
+              `${user._id}-face`,
+            title:
+              "Face verification completed",
+            subtitle:
+              "Identity successfully registered",
+            time:
+              user.updatedAt,
+            icon:
+              "scan-outline",
+            color:
+              "#ea580c",
+          },
+        ];
+      }
+
+      const recentActivity = [
+        ...attendanceActivities,
+        ...verificationActivities,
+      ].sort(
+        (a, b) =>
+          new Date(b.time).getTime() -
+          new Date(a.time).getTime()
+      );
+
+      return res.status(200).json({
+
+        success: true,
+
+        total:
+          recentActivity.length,
+
+        recentActivity,
+
+      });
+
+    } catch (error) {
+
+      console.error(error);
+
+      return res.status(500).json({
+
+        success: false,
+
+        message:
+          "Failed to fetch recent activity",
+      });
+
+    }
+  }
+
 }

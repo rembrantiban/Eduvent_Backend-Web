@@ -30,4 +30,7 @@ router.get("/analytics/:eventId", requireAuth, getAttendanceAnalytics);
 // Student Attendance Analytics
 router.get("/student-analytics", MobileAuth, AttendanceController.getStudentAttendanceAnalytics);
 
+// Student Recent Activity 
+router.get("/recent-activity", MobileAuth, AttendanceController.getRecentActivity);
+
 export default router;
