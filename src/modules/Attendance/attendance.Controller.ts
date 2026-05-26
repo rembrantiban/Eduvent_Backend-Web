@@ -1006,4 +1006,114 @@ export class AttendanceController {
 
     }
   }
+
+  static async getStudentAttendanceAnalytics(
+  req: Request,
+  res: Response
+) {
+  try {
+
+    const userId = req.user?._id;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
+
+    const userObjectId =
+      new mongoose.Types.ObjectId(userId);
+
+    /* PRESENT */
+    const presentCount =
+      await Attendance.countDocuments({
+        userId: userObjectId,
+        status: "Present",
+      });
+
+    /* LATE */
+    const lateCount =
+      await Attendance.countDocuments({
+        userId: userObjectId,
+        status: "Late",
+      });
+
+    /* JOINED EVENTS */
+    const joinedEventIds =
+      await Attendance.distinct(
+        "eventId",
+        {
+          userId: userObjectId,
+        }
+      );
+
+    /* MISSED EVENTS */
+    const missedCount =
+      await Event.countDocuments({
+        status: "Finished",
+        _id: {
+          $nin: joinedEventIds,
+        },
+      });
+
+    /* TOTAL */
+    const total =
+      presentCount +
+      lateCount +
+      missedCount;
+
+    /* ATTENDANCE RATE */
+    const attendanceRate =
+      total > 0
+        ? (
+            ((presentCount + lateCount) /
+              total) *
+            100
+          ).toFixed(1)
+        : "0";
+
+    return res.status(200).json({
+      success: true,
+
+      analytics: {
+        present: presentCount,
+        late: lateCount,
+        missed: missedCount,
+        total,
+        attendanceRate,
+      },
+
+      chartData: [
+        {
+          name: "Present",
+          population: presentCount,
+          color: "#f59e0b",
+        },
+
+        {
+          name: "Late",
+          population: lateCount,
+          color: "#818cf8",
+        },
+
+        {
+          name: "Missed",
+          population: missedCount,
+          color: "#2dd4bf",
+        },
+      ],
+    });
+
+  } catch (error) {
+
+    console.error(error);
+
+    return res.status(500).json({
+      success: false,
+      message:
+        "Failed to fetch analytics",
+    });
+  }
+}
 }
