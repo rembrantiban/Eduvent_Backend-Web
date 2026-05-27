@@ -236,37 +236,106 @@ export const sendEventNotification =
     }
   };
 
-export const getAnnouncements = async (req: Request, res: Response) => {
+export const getAnnouncements = async ( req: Request,  res: Response ) => {
+
   try {
+
     if (!req.user) {
-      return res.status(401).json({ message: "Unauthorized" });
+
+      return res.status(401).json({
+        message: "Unauthorized",
+      });
     }
 
-    const userDepartment = req.user.department;
+    const notifications =
+      await Notification.find()
 
-    const notifications = await Notification.find({
-      $or: [
-        { targetDepartment: "All Department" },
-        { targetDepartment: userDepartment },
-      ],
-    })
-      .sort({ createdAt: -1 }) 
-      .populate("sender", "firstName lastName"); 
+        .populate(
+          "sender",
+          "firstName lastName avatar"
+        )
+
+        .populate(
+          "eventId",
+          "title imageUrl targetDepartments targetYearLevels targetMajors targetSections isForAllStudents"
+        )
+
+        .sort({
+          createdAt: -1,
+        });
+
+    /* FILTER ONLY NOTIFICATIONS
+       THAT MATCH CURRENT USER */
+
+    const filteredNotifications =
+      notifications.filter(
+        (notification: any) => {
+
+          const event =
+            notification.eventId;
+
+          if (!event) return false;
+
+          if (
+            event.isForAllStudents
+          ) {
+            return true;
+          }
+
+          const departmentMatch =
+            !event.targetDepartments?.length ||
+            event.targetDepartments.includes(
+              req.user.department
+            );
+
+          const yearMatch =
+            !event.targetYearLevels?.length ||
+            event.targetYearLevels.includes(
+              req.user.yearLevel
+            );
+
+          const majorMatch =
+            !event.targetMajors?.length ||
+            event.targetMajors.includes(
+              req.user.major
+            );
+
+          const sectionMatch =
+            !event.targetSections?.length ||
+            event.targetSections.includes(
+              req.user.section
+            );
+
+          return (
+            departmentMatch &&
+            yearMatch &&
+            majorMatch &&
+            sectionMatch
+          );
+        }
+      );
 
     return res.status(200).json({
+
       success: true,
-      notifications,
+
+      notifications:
+        filteredNotifications,
     });
 
   } catch (error) {
+
     console.error(error);
+
     return res.status(500).json({
+
       success: false,
-      message: "Failed to fetch announcements",
+
+      message:
+        "Failed to fetch announcements",
     });
   }
 };
-
 export const getAllNotifications = async ( req: Request, res: Response) => {
 
     try {
