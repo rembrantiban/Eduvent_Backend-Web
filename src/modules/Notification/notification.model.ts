@@ -6,7 +6,8 @@ export interface INotification extends Document {
 
   sender?: mongoose.Types.ObjectId;
   
-  targetDepartment: string;
+
+  eventId?: mongoose.Types.ObjectId;
 
   data?: {
     screen?: string;
@@ -28,12 +29,6 @@ const NotificationSchema = new Schema<INotification>(
       required: true,
     },
 
-    targetDepartment: {
-      type: String, 
-      required: true,
-      default: "All Deparment"
-    },
-
     sender: {
       type: Schema.Types.ObjectId,
       ref: "User",
@@ -42,6 +37,11 @@ const NotificationSchema = new Schema<INotification>(
     data: {
       screen: String,
       eventId: String,
+    },
+
+    eventId: {
+      type: Schema.Types.ObjectId,
+      ref: "Event",
     },
 
     sentAt: {

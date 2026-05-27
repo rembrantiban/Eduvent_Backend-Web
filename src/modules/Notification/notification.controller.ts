@@ -1,77 +1,240 @@
 import { Request, Response } from "express";
 import { Notification } from "./notification.model";
 import { User } from "../User/user.Model";
+import { Event } from "../Event/event.Model";
 
-export const createAnnouncement = async (req: Request, res: Response) => {
-  try {
-    const { title, message, targetDepartment } = req.body;
+export const sendEventNotification =
+  async (
+    req: Request,
+    res: Response
+  ) => {
 
-    // 1. Save notification
-    const notification = await Notification.create({
-      title,
-      message,
-      sender: req.user._id,
-      targetDepartment: targetDepartment || "All Department",
-      data: {
-        screen: "Announcements",
-      },
-    });
+    try {
 
-    if (!req.user) {
-      return res.status(401).json({ message: "Unauthorized" });
-    }
+      const {
+        title,
+        message,
+        eventId,
+      } = req.body;
 
-    let query: any = {
-      role: "student",
-      pushToken: { $ne: null },
-    };
+      if (
+        !title ||
+        !message ||
+        !eventId
+      ) {
 
-    if (targetDepartment && targetDepartment !== "All Department") {
-      query.department = targetDepartment;
-    }
+        return res.status(400).json({
 
-    const students = await User.find(query);
+          success: false,
 
-    console.log("Sending to users:", students.length);
+          message:
+            "Title, message, and eventId are required",
+        });
+      }
 
-    const messages = students.map((user) => ({
-      to: user.pushToken as string,
-      sound: "default",
-      title,
-      body: message,
-      data: {
-        screen: "Announcements",
-        senderName: `${req.user.firstName} ${req.user.lastName}`,
-      },
-    }));
+      /* FIND EVENT */
 
-    for (let i = 0; i < messages.length; i += 100) {
-      const chunk = messages.slice(i, i + 100);
+      const event =
+        await Event.findById(eventId);
 
-      await fetch("https://exp.host/--/api/v2/push/send", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      if (!event) {
+
+        return res.status(404).json({
+
+          success: false,
+
+          message:
+            "Event not found",
+        });
+      }
+
+      /* BUILD STUDENT QUERY */
+
+      let query: any = {
+
+        role: "student",
+
+        pushToken: {
+          $ne: null,
         },
-        body: JSON.stringify(chunk),
+      };
+
+      /* TARGET FILTERS */
+
+      if (
+        !event.isForAllStudents
+      ) {
+
+        query.$and = [];
+
+        if (
+          event.targetDepartments?.length
+        ) {
+
+          query.$and.push({
+
+            department: {
+              $in:
+                event.targetDepartments,
+            },
+          });
+        }
+
+        if (
+          event.targetYearLevels?.length
+        ) {
+
+          query.$and.push({
+
+            yearLevel: {
+              $in:
+                event.targetYearLevels,
+            },
+          });
+        }
+
+        if (
+          event.targetMajors?.length
+        ) {
+
+          query.$and.push({
+
+            major: {
+              $in:
+                event.targetMajors,
+            },
+          });
+        }
+
+        if (
+          event.targetSections?.length
+        ) {
+
+          query.$and.push({
+
+            section: {
+              $in:
+                event.targetSections,
+            },
+          });
+        }
+      }
+
+      /* FIND MATCHING STUDENTS */
+
+      const students =
+        await User.find(query);
+
+      /* SAVE NOTIFICATION */
+
+      const notification =
+        await Notification.create({
+
+          title,
+
+          message,
+
+          sender:
+            req.user?._id,
+
+          eventId:
+            event._id,
+
+          data: {
+
+            screen:
+              "EventDetails",
+
+            eventId:
+              event._id.toString(),
+          },
+        });
+
+      /* BUILD PUSH PAYLOAD */
+
+      const messages =
+        students.map((user) => ({
+
+          to:
+            user.pushToken as string,
+
+          sound: "default",
+
+          title,
+
+          body: message,
+
+          data: {
+
+            screen:
+              "EventDetails",
+
+            eventId:
+              event._id.toString(),
+
+            senderName:
+              `${req.user?.firstName} ${req.user?.lastName}`,
+          },
+        }));
+
+      /* SEND IN CHUNKS */
+
+      for (
+        let i = 0;
+        i < messages.length;
+        i += 100
+      ) {
+
+        const chunk =
+          messages.slice(
+            i,
+            i + 100
+          );
+
+        await fetch(
+          "https://exp.host/--/api/v2/push/send",
+          {
+
+            method: "POST",
+
+            headers: {
+
+              "Content-Type":
+                "application/json",
+            },
+
+            body:
+              JSON.stringify(chunk),
+          }
+        );
+      }
+
+      return res.status(200).json({
+
+        success: true,
+
+        totalRecipients:
+          students.length,
+
+        message:
+          "Event notification sent successfully",
+
+        notification,
+      });
+
+    } catch (error) {
+
+      console.error(error);
+
+      return res.status(500).json({
+
+        success: false,
+
+        message:
+          "Failed to send event notification",
       });
     }
-
-    res.status(200).json({
-      success: true,
-      message: "Notification sent successfully",
-      notification,
-    });
-
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to send notification",
-    });
-  }
-};
-
+  };
 
 export const getAnnouncements = async (req: Request, res: Response) => {
   try {
