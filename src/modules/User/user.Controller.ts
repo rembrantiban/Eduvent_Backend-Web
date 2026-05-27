@@ -735,37 +735,71 @@ export const updateUserProfileForStudent = async (req: Request, res: Response) =
 
 }
 
-export const requestResetCode = async (req: Request, res: Response) => {
+export const requestResetCode = async (
+  req: Request,
+  res: Response
+) => {
   try {
     const { email } = req.body;
 
+    console.log("EMAIL:", email);
+
     const user = await User.findOne({ email });
+
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(404).json({
+        message: "User not found",
+      });
     }
 
-    // 6-digit code
-    const code = crypto.randomInt(100000, 999999).toString();
+    const code = crypto
+      .randomInt(100000, 999999)
+      .toString();
 
     user.resetPasswordCode = crypto
       .createHash("sha256")
       .update(code)
       .digest("hex");
 
-    user.resetPasswordExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
+    user.resetPasswordExpires = new Date(
+      Date.now() + 10 * 60 * 1000
+    );
+
     user.resetPasswordVerified = false;
 
     await user.save();
 
-  await resend.emails.send({
-    from: "EduVent <no-reply@eduvent.site>",
-    to: email,
-    subject: "Password Reset Code",
-    html: emailTemplate(Number(code), user.firstName),
-  });
-    res.json({ message: "Reset code sent to email" });
-  } catch (err) {
-    res.status(500).json({ message: "Server error" });
+    const resendResponse =
+      await resend.emails.send({
+        from:
+          "EduVent <no-reply@eduvent.site>",
+        to: email,
+        subject: "Password Reset Code",
+        html: emailTemplate(
+          Number(code),
+          user.firstName
+        ),
+      });
+
+    console.log(
+      "RESEND RESPONSE:",
+      resendResponse
+    );
+
+    return res.json({
+      success: true,
+      message: "Reset code sent to email",
+    });
+
+  } catch (err: any) {
+
+    console.log("RESEND ERROR:", err);
+
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+      error: err.message,
+    });
   }
 };
 
