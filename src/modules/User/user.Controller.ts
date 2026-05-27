@@ -7,6 +7,7 @@ import crypto from "crypto";
 import { resend } from "../../common/lib/resend";
 import cloudinary from "../../config/cloudinary"
 import canAssignRole from "../../common/utils/roles"
+import { emailTemplate } from "../../services/EmailTemplate.services";
 const SALT_ROUNDS = 12;
 
 export const signupUser = async (req: Request, res: Response) => {
@@ -756,13 +757,12 @@ export const requestResetCode = async (req: Request, res: Response) => {
 
     await user.save();
 
-    await resend.emails.send({
-      from: "no-reply@yourdomain.com",
-      to: email,
-      subject: "Password Reset Code",
-      text: `Your password reset code is: ${code}\nExpires in 10 minutes.`,
-    });
-
+  await resend.emails.send({
+    from: "EduVent <no-reply@eduvent.site>",
+    to: email,
+    subject: "Password Reset Code",
+    html: emailTemplate(Number(code), user.firstName),
+  });
     res.json({ message: "Reset code sent to email" });
   } catch (err) {
     res.status(500).json({ message: "Server error" });
