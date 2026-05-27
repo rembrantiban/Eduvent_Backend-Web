@@ -848,10 +848,10 @@ export const resetPassword = async (req: Request, res: Response) => {
 
     user.password = await bcrypt.hash(newPassword, 12);
 
-    // Cleanup
-    user.resetPasswordCode = undefined;
-    user.resetPasswordExpires = undefined;
-    user.resetPasswordVerified = undefined;
+     // Cleanup
+     // user.resetPasswordCode = undefined;
+    //  user.resetPasswordExpires = undefined;
+   // user.resetPasswordVerified = undefined;
 
     await user.save();
 
@@ -861,6 +861,90 @@ export const resetPassword = async (req: Request, res: Response) => {
   }
 };
 
+
+export const resendResetCode = async (
+  req: Request,
+  res: Response
+) => {
+
+  try {
+
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Email is required",
+      });
+    }
+
+    const user = await User.findOne({
+      email,
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message:
+          "User not found",
+      });
+    }
+
+    // Generate new code
+    const code = crypto
+      .randomInt(100000, 999999)
+      .toString();
+
+    // Hash code
+    user.resetPasswordCode =
+      crypto
+        .createHash("sha256")
+        .update(code)
+        .digest("hex");
+
+    // Expiration
+    user.resetPasswordExpires =
+      new Date(
+        Date.now() +
+        10 * 60 * 1000
+      );
+
+    // Reset verification state
+    user.resetPasswordVerified =
+      false;
+
+    await user.save();
+
+    await resend.emails.send({
+      from: "EduVent <no-reply@eduvent.site>",
+      to: email,
+      subject: "Your New Reset Code",
+      html: emailTemplate(
+        Number(code),
+        user.firstName
+      ),
+    });
+
+    return res.status(200).json({
+      success: true,
+      message:
+        "New reset code sent",
+    });
+
+  } catch (err) {
+
+    console.log(
+      "RESEND RESET CODE ERROR:",
+      err
+    );
+
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+};
 
 export const logoutUser = async (req: Request, res: Response) => {
   try {

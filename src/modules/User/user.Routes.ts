@@ -24,6 +24,7 @@ import {
          updateUserProfileForStudent,
          updateUser,
          updateUserRole,
+         resendResetCode,
         } from "./user.Controller";
 import uploadImage from "../../middleware/multer";
 
@@ -40,6 +41,7 @@ router.put("/complete-profile", MobileAuth, completeProfile);
 router.post("/request-password-reset", requestResetCode);
 router.post("/verify-password-reset", verifyResetCode);
 router.post("/confirm-password-reset", resetPassword);
+router.post("/resend-reset-code", resendResetCode);
 router.post("/create-user-by-teacher", requireAuth, createUserByTeacher);
 router.post("/create-user-by-admin", requireAuth, createUserByAdmin);
 router.get("/get-all-users", requireAuth, getAllUsers);
