@@ -267,23 +267,40 @@ export const getAnnouncements = async (req: Request, res: Response) => {
   }
 };
 
-export const getAllNotifications = async (req: Request, res: Response) => {
-  try {
-    const notifications = await Notification.find()
-      .populate("sender", "firstName lastName avatar") 
-      .sort({ createdAt: -1 });
+export const getAllNotifications = async ( req: Request, res: Response) => {
 
-    return res.status(200).json({
-      success: true,
-      notifications,
-    });
+    try {
+      const notifications = await Notification.find()
 
-  } catch (error) {
-    console.error("Error fetching notifications:", error);
+          .populate(
+            "sender",
+            "firstName lastName avatar"
+          )
 
-    return res.status(500).json({
-      success: false,
-      message: "Failed to fetch notifications",
-    });
-  }
-};
+          .populate(
+            "eventId",
+            "title imageUrl"
+          )
+
+          .sort({
+            createdAt: -1
+          });
+
+      return res.status(200).json({
+        success: true,
+        notifications,
+      });
+
+    } catch (error) {
+      console.error(
+        "Error fetching notifications:",
+        error
+      );
+
+      return res.status(500).json({
+        success: false,
+        message:
+          "Failed to fetch notifications",
+      });
+    }
+  };
