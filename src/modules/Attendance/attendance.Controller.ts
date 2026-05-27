@@ -91,12 +91,12 @@ export class AttendanceController {
                 `data:image/jpeg;base64,${base64Image}`
             }
           );
-          console.log( "ABOUT TO CALL FLASK");
+        console.log("ABOUT TO CALL FLASK");
 
         recognizeData =
           flaskResponse.data;
 
-        console.log( "FLASK RESPONSE:",recognizeData);
+        console.log("FLASK RESPONSE:", recognizeData);
 
       } catch (error: any) {
 
@@ -1007,297 +1007,296 @@ export class AttendanceController {
     }
   }
 
-  static async getStudentAttendanceAnalytics( req: Request, res: Response ) {
-  try {
+  static async getStudentAttendanceAnalytics(req: Request, res: Response) {
+    try {
 
-    const userId = req.user?._id;
+      const userId = req.user?._id;
 
-    if (!userId) {
-      return res.status(401).json({
-        success: false,
-        message: "Unauthorized",
-      });
-    }
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized",
+        });
+      }
 
-    const userObjectId =
-      new mongoose.Types.ObjectId(userId);
+      const userObjectId =
+        new mongoose.Types.ObjectId(userId);
 
-    /* PRESENT */
-    const presentCount =
-      await Attendance.countDocuments({
-        userId: userObjectId,
-        status: "Present",
-      });
-
-    /* LATE */
-    const lateCount =
-      await Attendance.countDocuments({
-        userId: userObjectId,
-        status: "Late",
-      });
-
-    /* JOINED EVENTS */
-    const joinedEventIds =
-      await Attendance.distinct(
-        "eventId",
-        {
+      /* PRESENT */
+      const presentCount =
+        await Attendance.countDocuments({
           userId: userObjectId,
-        }
-      );
+          status: "Present",
+        });
 
-    /* MISSED EVENTS */
-    const missedCount =
-      await Event.countDocuments({
-        status: "Finished",
-        _id: {
-          $nin: joinedEventIds,
-        },
-      });
+      /* LATE */
+      const lateCount =
+        await Attendance.countDocuments({
+          userId: userObjectId,
+          status: "Late",
+        });
 
-    /* TOTAL */
-    const total =
-      presentCount +
-      lateCount +
-      missedCount;
+      /* JOINED EVENTS */
+      const joinedEventIds =
+        await Attendance.distinct(
+          "eventId",
+          {
+            userId: userObjectId,
+          }
+        );
 
-    /* ATTENDANCE RATE */
-    const attendanceRate =
-      total > 0
-        ? (
+      /* MISSED EVENTS */
+      const missedCount =
+        await Event.countDocuments({
+          status: "Finished",
+          _id: {
+            $nin: joinedEventIds,
+          },
+        });
+
+      /* TOTAL */
+      const total =
+        presentCount +
+        lateCount +
+        missedCount;
+
+      /* ATTENDANCE RATE */
+      const attendanceRate =
+        total > 0
+          ? (
             ((presentCount + lateCount) /
               total) *
             100
           ).toFixed(1)
-        : "0";
+          : "0";
 
-    return res.status(200).json({
-      success: true,
+      return res.status(200).json({
+        success: true,
 
-      analytics: {
-        present: presentCount,
-        late: lateCount,
-        missed: missedCount,
-        total,
-        attendanceRate,
-      },
-
-      chartData: [
-        {
-          name: "Present",
-          population: presentCount,
-          color: "#f59e0b",
+        analytics: {
+          present: presentCount,
+          late: lateCount,
+          missed: missedCount,
+          total,
+          attendanceRate,
         },
 
-        {
-          name: "Late",
-          population: lateCount,
-          color: "#818cf8",
-        },
+        chartData: [
+          {
+            name: "Present",
+            population: presentCount,
+            color: "#f59e0b",
+          },
 
-        {
-          name: "Missed",
-          population: missedCount,
-          color: "#2dd4bf",
-        },
-      ],
-    });
+          {
+            name: "Late",
+            population: lateCount,
+            color: "#818cf8",
+          },
 
-  } catch (error) {
+          {
+            name: "Missed",
+            population: missedCount,
+            color: "#2dd4bf",
+          },
+        ],
+      });
 
-    console.error(error);
+    } catch (error) {
 
-    return res.status(500).json({
-      success: false,
-      message:
-        "Failed to fetch analytics",
-    });
+      console.error(error);
+
+      return res.status(500).json({
+        success: false,
+        message:
+          "Failed to fetch analytics",
+      });
+    }
   }
-}
 
- static async getRecentActivity(
-  req: Request,
-  res: Response
-) {
+  static async getRecentActivity(
+    req: Request,
+    res: Response
+  ) {
 
-  try {
+    try {
 
-    const userId = req.user?._id;
+      const userId = req.user?._id;
 
-    if (!userId) {
+      if (!userId) {
 
-      return res.status(401).json({
-        success: false,
-        message: "Unauthorized",
-      });
-    }
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized",
+        });
+      }
 
-    const user =
-      await User.findById(userId);
+      const user =
+        await User.findById(userId);
 
-    if (!user) {
+      if (!user) {
 
-      return res.status(404).json({
-        success: false,
-        message: "User not found",
-      });
-    }
+        return res.status(404).json({
+          success: false,
+          message: "User not found",
+        });
+      }
 
-    /* TODAY RANGE */
+      /* TODAY RANGE */
 
-    const startOfDay = new Date();
+      const startOfDay = new Date();
 
-    startOfDay.setHours(
-      0,
-      0,
-      0,
-      0
-    );
-
-    const endOfDay = new Date();
-
-    endOfDay.setHours(
-      23,
-      59,
-      59,
-      999
-    );
-
-    /* TODAY ATTENDANCE */
-
-    const attendance =
-      await Attendance.find({
-
-        userId:
-          new mongoose.Types.ObjectId(
-            userId
-          ),
-
-        createdAt: {
-
-          $gte: startOfDay,
-
-          $lte: endOfDay,
-        },
-
-      })
-        .populate("eventId")
-
-        .sort({
-          createdAt: -1,
-        })
-
-        .limit(5);
-
-    /* FORMAT ATTENDANCE */
-
-    const attendanceActivities =
-      attendance.map(
-        (item: any) => ({
-
-          id:
-            `attendance-${item._id}`,
-
-          title:
-            item.status === "Late"
-              ? "Checked in late"
-              : "Checked in successfully",
-
-          subtitle:
-            item.eventId?.title ||
-            "Unknown Event",
-
-          time:
-            item.createdAt,
-
-          icon:
-            item.status === "Late"
-              ? "time-outline"
-              : "checkmark-circle-outline",
-
-          color:
-            item.status === "Late"
-              ? "#f59e0b"
-              : "#16a34a",
-
-        })
+      startOfDay.setHours(
+        0,
+        0,
+        0,
+        0
       );
 
-    /* FACE VERIFICATION */
+      const endOfDay = new Date();
 
-    let verificationActivities:
-      any[] = [];
+      endOfDay.setHours(
+        23,
+        59,
+        59,
+        999
+      );
 
-    const faceRegisteredToday =
+      /* TODAY ATTENDANCE */
 
-      user.isFaceRegistered &&
+      const attendance =
+        await Attendance.find({
 
-      user.createdAt >= startOfDay &&
+          userId:
+            new mongoose.Types.ObjectId(
+              userId
+            ),
 
-      user.createdAt <= endOfDay;
+          createdAt: {
 
-    if (faceRegisteredToday) {
+            $gte: startOfDay,
 
-      verificationActivities = [
+            $lte: endOfDay,
+          },
 
-        {
+        })
+          .populate("eventId")
 
-          id:
-            "face-registration",
+          .sort({
+            createdAt: -1,
+          })
 
-          title:
-            "Face verification completed",
+          .limit(5);
 
-          subtitle:
-            "Identity successfully registered",
+      /* FORMAT ATTENDANCE */
 
-          time:
-            user.createdAt,
+      const attendanceActivities =
+        attendance.map(
+          (item: any) => ({
 
-          icon:
-            "scan-outline",
+            id:
+              `attendance-${item._id}`,
 
-          color:
-            "#ea580c",
-        },
-      ];
+            title:
+              item.status === "Late"
+                ? "Checked in late"
+                : "Checked in successfully",
+
+            subtitle:
+              item.eventId?.title ||
+              "Unknown Event",
+
+            time:
+              item.createdAt,
+
+            icon:
+              item.status === "Late"
+                ? "time-outline"
+                : "checkmark-circle-outline",
+
+            color:
+              item.status === "Late"
+                ? "#f59e0b"
+                : "#16a34a",
+
+          })
+        );
+
+      /* FACE VERIFICATION */
+
+      let verificationActivities:
+        any[] = [];
+
+      const faceRegisteredToday =
+
+        user.isFaceRegistered &&
+
+        user.createdAt >= startOfDay &&
+
+        user.createdAt <= endOfDay;
+
+      if (faceRegisteredToday) {
+
+        verificationActivities = [
+
+          {
+
+            id:
+              "face-registration",
+
+            title:
+              "Face verification completed",
+
+            subtitle:
+              "Identity successfully registered",
+
+            time:
+              user.createdAt,
+
+            icon:
+              "scan-outline",
+
+            color:
+              "#ea580c",
+          },
+        ];
+      }
+
+      /* MERGE + SORT */
+
+      const recentActivity = [
+
+        ...attendanceActivities,
+
+        ...verificationActivities,
+
+      ].sort(
+        (a, b) =>
+          new Date(b.time).getTime() -
+          new Date(a.time).getTime()
+      );
+
+      return res.status(200).json({
+
+        success: true,
+
+        total:
+          recentActivity.length,
+
+        recentActivity,
+      });
+
+    } catch (error) {
+
+      console.error(error);
+
+      return res.status(500).json({
+
+        success: false,
+
+        message:
+          "Failed to fetch recent activity",
+      });
     }
-
-    /* MERGE + SORT */
-
-    const recentActivity = [
-
-      ...attendanceActivities,
-
-      ...verificationActivities,
-
-    ].sort(
-      (a, b) =>
-        new Date(b.time).getTime() -
-        new Date(a.time).getTime()
-    );
-
-    return res.status(200).json({
-
-      success: true,
-
-      total:
-        recentActivity.length,
-
-      recentActivity,
-    });
-
-  } catch (error) {
-
-    console.error(error);
-
-    return res.status(500).json({
-
-      success: false,
-
-      message:
-        "Failed to fetch recent activity",
-    });
   }
-}
-
 }
