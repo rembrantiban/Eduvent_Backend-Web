@@ -5,7 +5,7 @@ import { MobileAuth } from "../../middleware/AuthCookieMiddleware"
 
 const router = express.Router()
 
-router.post("/createannouncements", requireAuth, sendEventNotification)
+router.post("/sendeventnotification", requireAuth, sendEventNotification)
 router.get("/getannouncements", MobileAuth, getAnnouncements)
 router.get("/getallnotifications", requireAuth, getAllNotifications)
 
