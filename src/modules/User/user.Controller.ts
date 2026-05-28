@@ -1343,3 +1343,103 @@ export const updateUserRole = async (req: any, res: any) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
+export const changeStudentPassword =
+  async (
+    req: Request,
+    res: Response
+  ) => {
+
+    try {
+
+      const userId =
+        req.user._id;
+
+      const {
+        currentPassword,
+        newPassword,
+        confirmPassword,
+      } = req.body;
+
+      // VALIDATE
+      if (
+        !currentPassword ||
+        !newPassword ||
+        !confirmPassword
+      ) {
+
+        return res.status(400).json({
+          message:
+            "All fields are required",
+        });
+      }
+
+      // PASSWORD MATCH
+      if (
+        newPassword !==
+        confirmPassword
+      ) {
+
+        return res.status(400).json({
+          message:
+            "Passwords do not match",
+        });
+      }
+
+      const user =
+        await User.findById(
+          userId
+        );
+
+      if (!user) {
+
+        return res.status(404).json({
+          message:
+            "User not found",
+        });
+      }
+
+      const isMatch =
+        await bcrypt.compare(
+          currentPassword,
+          user.password
+        );
+
+      if (!isMatch) {
+
+        return res.status(400).json({
+          message:
+            "Current password is incorrect",
+        });
+      }
+
+      const hashedPassword =
+        await bcrypt.hash(
+          newPassword,
+          12
+        );
+
+      user.password =
+        hashedPassword;
+
+      await user.save();
+
+      res.status(200).json({
+        success: true,
+        message:
+          "Password updated successfully",
+      });
+
+    } catch (error) {
+
+      console.log(
+        "CHANGE PASSWORD ERROR:",
+        error
+      );
+
+      res.status(500).json({
+        message:
+          "Server error",
+      });
+    }
+};
