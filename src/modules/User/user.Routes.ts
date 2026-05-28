@@ -31,7 +31,6 @@ import uploadImage from "../../middleware/multer";
 
 const router = express.Router();
 
-
 router.post("/signup", signupUser);
 router.post("/login", loginUser);
 router.put("/update-user/:id", requireAuth, updateUser);
@@ -55,6 +54,6 @@ router.put("/update-password", requireAuth, updatePassword);
 router.put("/update-profile-for-student", requireAuth, uploadImage.single("avatar"), updateUserProfileForStudent);
 router.put("/update-user-role/:id", requireAuth, updateUserRole);
 router.put("/deactivate-user/:id", requireAuth, DeactivateUserAccount);
-router.get("/change-password", MobileAuth, changeStudentPassword);
+router.put("/change-password", MobileAuth, changeStudentPassword);
 
 export default router;  

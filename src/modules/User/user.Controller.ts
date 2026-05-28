@@ -551,6 +551,12 @@ export const loginUser = async (req: Request, res: Response) => {
         { studentId: normalizedIdentifier },
       ],
     }).select("+password");
+    
+    if(user && user.isActive === false) {
+      return res.status(401).json({
+        message: "Your account is deactivated. Please contact admin.",
+      });
+    }
 
     if (!user) {
       return res.status(401).json({
@@ -1344,8 +1350,7 @@ export const updateUserRole = async (req: any, res: any) => {
   }
 };
 
-export const changeStudentPassword =
-  async (
+export const changeStudentPassword = async (
     req: Request,
     res: Response
   ) => {
