@@ -257,7 +257,7 @@ export const getAnnouncements = async ( req: Request,  res: Response ) => {
 
         .populate(
           "eventId",
-          "title imageUrl targetDepartments targetYearLevels targetMajors targetSections isForAllStudents"
+          "title description status imageUrl date time endTime locationId targetDepartments targetYearLevels targetMajors targetSections isForAllStudents"
         )
 
         .sort({
