@@ -9,6 +9,6 @@ const router = express.Router()
 router.post("/sendeventnotification", requireAuth, sendEventNotification)
 router.get("/getannouncements", MobileAuth, getAnnouncements)
 router.get("/getallnotifications", requireAuth, getAllNotifications)
-router.patch("/markasread/:notificationId", requireAuth, markNotificationAsRead)
+router.patch("/markasread/:notificationId", MobileAuth, markNotificationAsRead)
 
 export default router
