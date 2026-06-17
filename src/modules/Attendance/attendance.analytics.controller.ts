@@ -346,76 +346,128 @@ export const getAttendanceByDepartment = async (
 };
 
 
-export const getOngoingEventAttendanceAnalytics =
-  async (req: Request, res: Response) => {
-    try {
-      const ongoingEvents = await Event.find({
-        status: EventStatus.ONGOING,
-      }).select("_id title");
+export const getOngoingEventAttendanceAnalytics = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const ongoingEvents = await Event.find({
+      status: EventStatus.ONGOING,
+    }).select("_id title");
 
-      const eventIds = ongoingEvents.map(
-        (event) => event._id
-      );
+    const eventIds = ongoingEvents.map(
+      (event) => event._id
+    );
 
-      const attendance = await Attendance.aggregate([
-        {
-          $match: {
-            eventId: { $in: eventIds },
+    // Count attendees
+    const attendanceData = await Attendance.aggregate([
+      {
+        $match: {
+          eventId: { $in: eventIds },
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "userId",
+          foreignField: "_id",
+          as: "user",
+        },
+      },
+      {
+        $unwind: "$user",
+      },
+      {
+        $group: {
+          _id: {
+            department: "$user.department",
+            major: "$user.major",
+            section: "$user.section",
           },
+          attended: { $sum: 1 },
         },
+      },
+    ]);
 
-        {
-          $lookup: {
-            from: "users",
-            localField: "userId",
-            foreignField: "_id",
-            as: "user",
+    // Count enrolled students
+    const studentData = await User.aggregate([
+      {
+        $match: {
+          role: "Student",
+        },
+      },
+      {
+        $group: {
+          _id: {
+            department: "$department",
+            major: "$major",
+            section: "$section",
           },
+          totalStudents: { $sum: 1 },
         },
+      },
+    ]);
 
-        {
-          $unwind: "$user",
-        },
+    // Merge both datasets
+    const analytics = studentData.map(
+      (studentGroup) => {
+        const attendanceGroup =
+          attendanceData.find(
+            (a) =>
+              a._id.department ===
+                studentGroup._id.department &&
+              a._id.major ===
+                studentGroup._id.major &&
+              a._id.section ===
+                studentGroup._id.section
+          );
 
-        {
-          $group: {
-            _id: {
-              department: "$user.department",
-              major: "$user.major",
-              section: "$user.section",
-            },
-            value: { $sum: 1 },
-          },
-        },
+        const attended =
+          attendanceGroup?.attended || 0;
 
-        {
-          $project: {
-            _id: 0,
-            department: "$_id.department",
-            major: "$_id.major",
-            section: "$_id.section",
-            value: 1,
-          },
-        },
+        const totalStudents =
+          studentGroup.totalStudents;
 
-        {
-          $sort: {
-            value: -1,
-          },
-        },
-      ]);
+        return {
+          department:
+            studentGroup._id.department,
+          major: studentGroup._id.major,
+          section: studentGroup._id.section,
 
-      return res.status(200).json({
-        success: true,
-        events: ongoingEvents,
-        data: attendance,
-      });
-    } catch (error) {
-      console.error(error);
+          attended,
+          totalStudents,
 
-      return res.status(500).json({
-        success: false,
-        message: "Failed to fetch analytics",
-      });
-    }
-  };
+          attendanceRate:
+            totalStudents > 0
+              ? Number(
+                  (
+                    (attended /
+                      totalStudents) *
+                    100
+                  ).toFixed(1)
+                )
+              : 0,
+        };
+      }
+    );
+
+    analytics.sort(
+      (a, b) =>
+        b.attendanceRate -
+        a.attendanceRate
+    );
+
+    return res.status(200).json({
+      success: true,
+      events: ongoingEvents,
+      data: analytics,
+    });
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch analytics",
+    });
+  }
+};
