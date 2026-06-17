@@ -903,3 +903,77 @@ export const getEventTrends = async (
     });
   }
 };
+
+export const getEventStatusAnalytics = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const completed = await Event.countDocuments({
+      status: EventStatus.FINISHED,
+    });
+
+    const ongoing = await Event.countDocuments({
+      status: EventStatus.ONGOING,
+    });
+
+    const upcoming = await Event.countDocuments({
+      status: EventStatus.UPCOMING,
+    });
+
+    const cancelled = await Event.countDocuments({
+      status: EventStatus.CANCELLED,
+    });
+
+    const total =
+      completed +
+      ongoing +
+      upcoming +
+      cancelled;
+
+    const calculatePct = (value: number) =>
+      total > 0
+        ? `${Math.round((value / total) * 100)}%`
+        : "0%";
+
+    const data = [
+      {
+        name: "Completed",
+        value: completed,
+        color: "#0f766e",
+        pct: calculatePct(completed),
+      },
+      {
+        name: "Ongoing",
+        value: ongoing,
+        color: "#ec4899",
+        pct: calculatePct(ongoing),
+      },
+      {
+        name: "Upcoming",
+        value: upcoming,
+        color: "#8b5cf6",
+        pct: calculatePct(upcoming),
+      },
+      {
+        name: "Cancelled",
+        value: cancelled,
+        color: "#facc15",
+        pct: calculatePct(cancelled),
+      },
+    ];
+
+    return res.status(200).json({
+      success: true,
+      data,
+      total,
+    });
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch event analytics",
+    });
+  }
+};
