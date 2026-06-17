@@ -1299,4 +1299,5 @@ export class AttendanceController {
       });
     }
   }
+  
 }

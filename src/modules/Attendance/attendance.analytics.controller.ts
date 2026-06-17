@@ -166,3 +166,181 @@ export const getAttendanceAnalytics = async (
         });
     }
 };
+
+export const getAttendancePerEvent = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const result = await Attendance.aggregate([
+      {
+        $group: {
+          _id: "$eventId",
+          attendees: { $sum: 1 },
+        },
+      },
+      {
+        $lookup: {
+          from: "events",
+          localField: "_id",
+          foreignField: "_id",
+          as: "event",
+        },
+      },
+      {
+        $unwind: "$event",
+      },
+      {
+        $project: {
+          _id: 0,
+          event: "$event.title",
+          attendees: 1,
+        },
+      },
+      {
+        $sort: {
+          attendees: -1,
+        },
+      },
+    ]);
+
+    const total = result.reduce(
+      (sum, item) => sum + item.attendees,
+      0
+    );
+
+    const max =
+      result.length > 0
+        ? Math.max(
+            ...result.map(
+              (item) => item.attendees
+            )
+          )
+        : 0;
+
+    return res.status(200).json({
+      success: true,
+      data: result,
+      total,
+      max,
+    });
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      success: false,
+      message:
+        "Failed to fetch attendance analytics",
+    });
+  }
+};
+
+export const getAttendanceByDepartment = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const departmentStats = await Attendance.aggregate([
+      {
+        $lookup: {
+          from: "users",
+          localField: "userId",
+          foreignField: "_id",
+          as: "student",
+        },
+      },
+
+      {
+        $unwind: "$student",
+      },
+
+      {
+        $group: {
+          _id: "$student.department",
+
+          total: { $sum: 1 },
+
+          attended: {
+            $sum: {
+              $cond: [
+                {
+                  $in: [
+                    "$status",
+                    ["Present", "Late"],
+                  ],
+                },
+                1,
+                0,
+              ],
+            },
+          },
+        },
+      },
+
+      {
+        $project: {
+          _id: 0,
+
+          department: "$_id",
+
+          attendanceRate: {
+            $round: [
+              {
+                $multiply: [
+                  {
+                    $divide: [
+                      "$attended",
+                      "$total",
+                    ],
+                  },
+                  100,
+                ],
+              },
+              0,
+            ],
+          },
+        },
+      },
+
+      {
+        $sort: {
+          attendanceRate: -1,
+        },
+      },
+    ]);
+
+    const average =
+      departmentStats.length > 0
+        ? (
+            departmentStats.reduce(
+              (sum, dept) =>
+                sum +
+                dept.attendanceRate,
+              0
+            ) /
+            departmentStats.length
+          ).toFixed(1)
+        : 0;
+
+    const topDepartment =
+      departmentStats[0] || null;
+
+    return res.status(200).json({
+      success: true,
+
+      data: departmentStats,
+
+      average,
+
+      topDepartment,
+    });
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      success: false,
+      message:
+        "Failed to fetch department analytics",
+    });
+  }
+};
