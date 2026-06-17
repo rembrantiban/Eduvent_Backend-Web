@@ -359,13 +359,13 @@ export const getOngoingEventAttendanceAnalytics = async (
       (event) => event._id
     );
 
-    // Count attendees
-    const attendanceData = await Attendance.aggregate([
+    const attendance = await Attendance.aggregate([
       {
         $match: {
           eventId: { $in: eventIds },
         },
       },
+
       {
         $lookup: {
           from: "users",
@@ -374,9 +374,11 @@ export const getOngoingEventAttendanceAnalytics = async (
           as: "user",
         },
       },
+
       {
         $unwind: "$user",
       },
+
       {
         $group: {
           _id: {
@@ -384,77 +386,45 @@ export const getOngoingEventAttendanceAnalytics = async (
             major: "$user.major",
             section: "$user.section",
           },
-          attended: { $sum: 1 },
+          value: { $sum: 1 }, // attendees
         },
       },
     ]);
 
-    // Count enrolled students
-    const studentData = await User.aggregate([
-      {
-        $match: {
-          role: "Student",
-        },
-      },
-      {
-        $group: {
-          _id: {
-            department: "$department",
-            major: "$major",
-            section: "$section",
-          },
-          totalStudents: { $sum: 1 },
-        },
-      },
-    ]);
-
-    // Merge both datasets
-    const analytics = studentData.map(
-      (studentGroup) => {
-        const attendanceGroup =
-          attendanceData.find(
-            (a) =>
-              a._id.department ===
-                studentGroup._id.department &&
-              a._id.major ===
-                studentGroup._id.major &&
-              a._id.section ===
-                studentGroup._id.section
-          );
-
-        const attended =
-          attendanceGroup?.attended || 0;
-
+    const analytics = await Promise.all(
+      attendance.map(async (item) => {
         const totalStudents =
-          studentGroup.totalStudents;
+          await User.countDocuments({
+            department: item._id.department,
+            major: item._id.major,
+            section: item._id.section,
+            role: "Student",
+          });
+
+        const attendanceRate =
+          totalStudents > 0
+            ? Number(
+                (
+                  (item.value / totalStudents) *
+                  100
+                ).toFixed(1)
+              )
+            : 0;
 
         return {
-          department:
-            studentGroup._id.department,
-          major: studentGroup._id.major,
-          section: studentGroup._id.section,
+          department: item._id.department,
+          major: item._id.major,
+          section: item._id.section,
 
-          attended,
+          value: item.value,
           totalStudents,
-
-          attendanceRate:
-            totalStudents > 0
-              ? Number(
-                  (
-                    (attended /
-                      totalStudents) *
-                    100
-                  ).toFixed(1)
-                )
-              : 0,
+          attendanceRate,
         };
-      }
+      })
     );
 
     analytics.sort(
-      (a, b) =>
-        b.attendanceRate -
-        a.attendanceRate
+      (a, b) => b.attendanceRate - a.attendanceRate
     );
 
     return res.status(200).json({
