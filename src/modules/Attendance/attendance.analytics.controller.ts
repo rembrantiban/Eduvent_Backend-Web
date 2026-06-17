@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import mongoose from "mongoose";
 
 import { Attendance } from "./attendance.Model";
-import { Event } from "../Event/event.Model";
+import { Event, EventStatus } from "../Event/event.Model";
 import { User } from "../User/user.Model";
 
 export const getAttendanceAnalytics = async (
@@ -344,3 +344,78 @@ export const getAttendanceByDepartment = async (
     });
   }
 };
+
+
+export const getOngoingEventAttendanceAnalytics =
+  async (req: Request, res: Response) => {
+    try {
+      const ongoingEvents = await Event.find({
+        status: EventStatus.ONGOING,
+      }).select("_id title");
+
+      const eventIds = ongoingEvents.map(
+        (event) => event._id
+      );
+
+      const attendance = await Attendance.aggregate([
+        {
+          $match: {
+            eventId: { $in: eventIds },
+          },
+        },
+
+        {
+          $lookup: {
+            from: "users",
+            localField: "userId",
+            foreignField: "_id",
+            as: "user",
+          },
+        },
+
+        {
+          $unwind: "$user",
+        },
+
+        {
+          $group: {
+            _id: {
+              department: "$user.department",
+              major: "$user.major",
+              section: "$user.section",
+            },
+            value: { $sum: 1 },
+          },
+        },
+
+        {
+          $project: {
+            _id: 0,
+            department: "$_id.department",
+            major: "$_id.major",
+            section: "$_id.section",
+            value: 1,
+          },
+        },
+
+        {
+          $sort: {
+            value: -1,
+          },
+        },
+      ]);
+
+      return res.status(200).json({
+        success: true,
+        events: ongoingEvents,
+        data: attendance,
+      });
+    } catch (error) {
+      console.error(error);
+
+      return res.status(500).json({
+        success: false,
+        message: "Failed to fetch analytics",
+      });
+    }
+  };
