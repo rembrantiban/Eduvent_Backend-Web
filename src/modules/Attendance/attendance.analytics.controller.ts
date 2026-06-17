@@ -398,7 +398,7 @@ export const getOngoingEventAttendanceAnalytics = async (
             department: item._id.department,
             major: item._id.major,
             section: item._id.section,
-            role: "Student",
+            role: "student",
           });
 
         const attendanceRate =
