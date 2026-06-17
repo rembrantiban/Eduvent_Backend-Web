@@ -800,3 +800,106 @@ export const getTotalOngoingEvents = async (req: Request, res: Response) => {
     });
   }
 }
+
+export const getEventTrends = async (
+  req: Request,
+  res: Response,
+) => {
+  try {
+    const { type = "weekly" } = req.query;
+
+    if (type === "weekly") {
+      const result = await Event.aggregate([
+        {
+          $group: {
+            _id: {
+              $dayOfWeek: "$date",
+            },
+            events: {
+              $sum: 1,
+            },
+          },
+        },
+      ]);
+
+      const days = [
+        "Sun",
+        "Mon",
+        "Tue",
+        "Wed",
+        "Thu",
+        "Fri",
+        "Sat",
+      ];
+
+      const data = days.map((day, index) => {
+        const found = result.find(
+          (r) => r._id === index + 1
+        );
+
+        return {
+          label: day,
+          events: found?.events || 0,
+        };
+      });
+
+      return res.json({
+        success: true,
+        data,
+      });
+    }
+
+    if (type === "monthly") {
+      const result = await Event.aggregate([
+        {
+          $group: {
+            _id: {
+              $month: "$date",
+            },
+            events: {
+              $sum: 1,
+            },
+          },
+        },
+      ]);
+
+      const months = [
+        "Jan",
+        "Feb",
+        "Mar",
+        "Apr",
+        "May",
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dec",
+      ];
+
+      const data = months.map(
+        (month, index) => {
+          const found = result.find(
+            (r) => r._id === index + 1
+          );
+
+          return {
+            label: month,
+            events: found?.events || 0,
+          };
+        }
+      );
+
+      return res.json({
+        success: true,
+        data,
+      });
+    }
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch trends",
+    });
+  }
+};

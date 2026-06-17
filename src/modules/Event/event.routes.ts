@@ -10,6 +10,7 @@ import {
     getTotalUpComingEvents,
     getStudentEvents,
     getTotalOngoingEvents,
+    getEventTrends,
 } from './event.Controller';
 import uploadImage from '../../middleware/multer';
 import MobileAuth from '../../middleware/AuthCookieMiddleware';
@@ -26,6 +27,7 @@ router.get("/finishedEvent", getFinishedEvents );
 router.get("/studentEvents", MobileAuth, getStudentEvents );    
 router.delete('/deleteEvent/:id', deleteEvent);
 router.get("/ongoingEvents", getTotalOngoingEvents);
+router.get("/eventTrends", getEventTrends);
 
 
 export default router;

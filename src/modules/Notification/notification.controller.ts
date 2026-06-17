@@ -255,10 +255,15 @@ export const getAnnouncements = async (req: Request, res: Response) => {
           "firstName lastName avatar"
         )
 
-        .populate(
-          "eventId",
-          "title description status imageUrl date time endTime locationId targetDepartments targetYearLevels targetMajors targetSections isForAllStudents"
-        )
+        .populate({
+          path:"eventId",
+          select:
+            "title description status imageUrl date time endTime locationId targetDepartments targetYearLevels targetMajors targetSections isForAllStudents",
+          populate: {
+            path: "locationId",
+            select: "venue"
+          },
+        })
 
         .sort({
           createdAt: -1,
