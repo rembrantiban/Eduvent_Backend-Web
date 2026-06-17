@@ -1082,6 +1082,7 @@ export const getAllUsers = async (req: Request, res: Response) => {
         studentId: user.studentId,
         yearLevel: user.yearLevel,
         avatar: user.avatar,
+        isFaceRegistered: user.isFaceRegistered,
         isActive: user.isActive,
         dateAdded: user.createdAt
           ? new Intl.DateTimeFormat("en-US", {
