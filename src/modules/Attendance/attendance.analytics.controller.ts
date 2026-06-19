@@ -441,3 +441,95 @@ export const getOngoingEventAttendanceAnalytics = async (
     });
   }
 };
+
+
+ export const getAllAttendanceReports = async (
+    req: Request,
+    res: Response
+  ) => {
+    try {
+
+      const events = await Event.find()
+        .populate(
+          "locationId",
+          "venue"
+        );
+
+      const reports = await Promise.all(
+        events.map(async (event) => {
+
+          const attendance =
+            await Attendance.aggregate([
+              {
+                $match: {
+                  eventId: event._id
+                }
+              },
+              {
+                $lookup: {
+                  from: "users",
+                  localField: "userId",
+                  foreignField: "_id",
+                  as: "user"
+                }
+              },
+              {
+                $unwind: "$user"
+              },
+              {
+                $project: {
+                  status: 1,
+                  timeIn: 1,
+
+                  student: {
+                    $concat: [
+                      "$user.firstName",
+                      " ",
+                      "$user.lastName"
+                    ]
+                  },
+
+                  studentId:
+                    "$user.studentId",
+
+                  department:
+                    "$user.department",
+
+                  yearLevel:
+                    "$user.yearLevel",
+
+                  section:
+                    "$user.section"
+                }
+              }
+            ]);
+
+          return {
+            title: event.title,
+            date: event.date,
+            time: event.time,
+            venue:
+              (event.locationId as any)?.venue ||
+              "No Venue",
+            attendees: attendance
+          };
+        })
+      );
+
+      return res.status(200).json({
+        success: true,
+        reports
+      });
+
+    } catch (error) {
+
+      console.error(error);
+
+      return res.status(500).json({
+        success: false,
+        message:
+          "Failed to fetch attendance reports"
+      });
+
+    }
+  }

@@ -1,7 +1,7 @@
 import { Router } from "express";
 import multer from "multer";
 import { AttendanceController } from "./attendance.Controller";
-import { getAttendanceAnalytics, getAttendanceByDepartment, getAttendancePerEvent, getOngoingEventAttendanceAnalytics } from "./attendance.analytics.controller"
+import { getAttendanceAnalytics, getAttendanceByDepartment, getAttendancePerEvent, getOngoingEventAttendanceAnalytics, getAllAttendanceReports } from "./attendance.analytics.controller"
 import MobileAuth from "../../middleware/AuthCookieMiddleware"
 import { requireAuth } from "../../common/middleware/authmiddleware";
 const router = Router();
@@ -42,5 +42,8 @@ router.get("/attendance-by-department", getAttendanceByDepartment);
 
 //Attendance Analytics 
 router.get("/attendance-analytics", getOngoingEventAttendanceAnalytics);
+
+// All Attendance Reports
+router.get("/get-reports", getAllAttendanceReports);
 
 export default router;
