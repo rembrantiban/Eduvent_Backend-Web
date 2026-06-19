@@ -398,3 +398,91 @@ export const getAllNotifications = async (req: Request, res: Response) => {
     });
   }
 };
+
+ export const countUserUnreadNotification = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
+
+    const notifications = await Notification.find()
+      .populate("eventId");
+
+    const filteredNotifications = notifications.filter(
+      (notification: any) => {
+        const event = notification.eventId;
+
+        if (!event) return false;
+
+        if (event.isForAllStudents) {
+          return true;
+        }
+
+        const departmentMatch =
+          !event.targetDepartments?.length ||
+          event.targetDepartments.includes(
+            req.user.department
+          );
+
+        const yearMatch =
+          !event.targetYearLevels?.length ||
+          event.targetYearLevels.includes(
+            req.user.yearLevel
+          );
+
+        const majorMatch =
+          !event.targetMajors?.length ||
+          event.targetMajors.includes(
+            req.user.major
+          );
+
+        const sectionMatch =
+          !event.targetSections?.length ||
+          event.targetSections.includes(
+            req.user.section
+          );
+
+        return (
+          departmentMatch &&
+          yearMatch &&
+          majorMatch &&
+          sectionMatch
+        );
+      }
+    );
+
+    const reads = await NotificationRead.find({
+      userId: req.user._id,
+    });
+
+    const readIds = new Set(
+      reads.map((r) =>
+        r.notificationId.toString()
+      )
+    );
+
+    const unreadCount =
+      filteredNotifications.filter(
+        (notification: any) =>
+          !readIds.has(notification._id.toString())
+      ).length;
+
+    return res.status(200).json({
+      success: true,
+      count: unreadCount,
+    });
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to count unread notifications",
+    });
+  }
+};
