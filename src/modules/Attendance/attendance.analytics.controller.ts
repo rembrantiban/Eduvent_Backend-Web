@@ -480,6 +480,7 @@ export const getOngoingEventAttendanceAnalytics = async (
                 $project: {
                   status: 1,
                   timeIn: 1,
+                  timeOut: 1,
 
                   student: {
                     $concat: [
@@ -494,6 +495,9 @@ export const getOngoingEventAttendanceAnalytics = async (
 
                   department:
                     "$user.department",
+
+                  major:
+                    "$user.major",
 
                   yearLevel:
                     "$user.yearLevel",
