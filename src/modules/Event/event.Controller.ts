@@ -977,3 +977,25 @@ export const getEventStatusAnalytics = async (
     });
   }
 };
+
+export const getFinishedEventTitles = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const events = await Event.find(
+      { status: EventStatus.FINISHED },
+      { title: 1, _id: 1 } // only return id and title
+    ).sort({ date: -1 });
+
+    return res.status(200).json({
+      success: true,
+      data: events,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch finished events",
+    });
+  }
+};
