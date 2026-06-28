@@ -591,7 +591,7 @@ export const loginUser = async (req: Request, res: Response) => {
         avatar: user.avatar
       },
       process.env.JWT_SECRET || "defaultsecret",
-      { expiresIn: "10s" }
+      { expiresIn: "7d" }
     );
 
     return res.status(200).json({
