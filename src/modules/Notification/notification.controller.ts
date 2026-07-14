@@ -360,6 +360,107 @@ export const getAnnouncements = async (req: Request, res: Response) => {
   }
 };
 
+export const updateNotification = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const { id } = req.params;
+
+    const {
+      title,
+      message,
+      eventId,
+    } = req.body;
+
+    const notification =
+      await Notification.findById(id);
+
+    if (!notification) {
+      return res.status(404).json({
+        success: false,
+        message: "Notification not found",
+      });
+    }
+
+    // Validate event if changing event
+    if (eventId) {
+      const event = await Event.findById(eventId);
+
+      if (!event) {
+        return res.status(404).json({
+          success: false,
+          message: "Event not found",
+        });
+      }
+
+      notification.eventId = event._id;
+      notification.data = {
+        screen: "EventDetails",
+        eventId: event._id.toString(),
+      };
+    }
+
+    if (title) notification.title = title;
+    if (message) notification.message = message;
+
+    await notification.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Notification updated successfully",
+      notification,
+    });
+
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to update notification",
+    });
+  }
+};
+
+export const deleteNotification = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const { id } = req.params;
+
+    const notification =
+      await Notification.findById(id);
+
+    if (!notification) {
+      return res.status(404).json({
+        success: false,
+        message: "Notification not found",
+      });
+    }
+
+    // Delete notification
+    await Notification.findByIdAndDelete(id);
+
+    // Delete all read records related to this notification
+    await NotificationRead.deleteMany({
+      notificationId: id,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Notification deleted successfully",
+    });
+
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to delete notification",
+    });
+  }
+};
 
 export const getAllNotifications = async (req: Request, res: Response) => {
 
@@ -486,3 +587,5 @@ export const getAllNotifications = async (req: Request, res: Response) => {
     });
   }
 };
+
+

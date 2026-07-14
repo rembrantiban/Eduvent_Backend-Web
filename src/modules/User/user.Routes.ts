@@ -26,6 +26,7 @@ import {
          updateUserRole,
          resendResetCode,
          changeStudentPassword,
+         getCurrentUser,
         } from "./user.Controller";
 import uploadImage from "../../middleware/multer";
 
@@ -55,5 +56,5 @@ router.put("/update-profile-for-student", requireAuth, uploadImage.single("avata
 router.put("/update-user-role/:id", requireAuth, updateUserRole);
 router.put("/deactivate-user/:id", requireAuth, DeactivateUserAccount);
 router.put("/change-password", MobileAuth, changeStudentPassword);
-
+router.get(  "/current-user", requireAuth ,getCurrentUser);
 export default router;  

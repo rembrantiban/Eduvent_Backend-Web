@@ -1,5 +1,5 @@
 import express from "express"
-import { sendEventNotification, getAnnouncements, getAllNotifications, countUserUnreadNotification } from "./notification.controller"
+import { sendEventNotification, getAnnouncements, getAllNotifications, countUserUnreadNotification, updateNotification, deleteNotification } from "./notification.controller"
 import { requireAuth } from "../../common/middleware/authmiddleware"
 import { MobileAuth } from "../../middleware/AuthCookieMiddleware"
 import { markNotificationAsRead  } from "./notification.read.controller"
@@ -11,5 +11,7 @@ router.get("/getannouncements", MobileAuth, getAnnouncements)
 router.get("/getallnotifications", requireAuth, getAllNotifications)
 router.patch("/markasread/:notificationId", MobileAuth, markNotificationAsRead)
 router.get("/countunread", MobileAuth, countUserUnreadNotification)
+router.put("/:id", requireAuth, updateNotification);
+router.delete("/:id", requireAuth, deleteNotification);
 
 export default router
