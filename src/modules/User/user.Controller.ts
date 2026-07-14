@@ -533,6 +533,58 @@ export const loginAdmin = async (req: Request, res: Response) => {
   }
 };
 
+export const getCurrentUser = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
+
+    const user = await User.findById(req.user._id)
+      .select("-password");
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found.",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      user: {
+        id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        role: user.role,
+        avatar: user.avatar,
+        studentId: user.studentId,
+        department: user.department,
+        major: user.major,
+        yearLevel: user.yearLevel,
+        section: user.section,
+        isFaceRegistered: user.isFaceRegistered,
+        isActive: user.isActive,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+      },
+    });
+
+  } catch (error) {
+    console.error("Get current user error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error.",
+    });
+  }
+};
 
 export const loginUser = async (req: Request, res: Response) => {
   try {
