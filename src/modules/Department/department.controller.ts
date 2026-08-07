@@ -1,27 +1,27 @@
 import { Request, Response } from "express";
-import { Department } from "./department.Model";
+import { Course } from "./department.Model";
 
-/* CREATE DEPARTMENT */
-export const createDepartment = async (
+/* CREATE COURSE */
+export const createCourse = async (
   req: Request,
   res: Response
 ) => {
   try {
-    const { code, name, description, majors } = req.body;
+    const { name, description, majors } = req.body;
 
-    if (!code || !name || !description) {
+    if (!name || !description) {
       return res.status(400).json({
-        message: "Code, name, and description are required",
+        message: "Course name and description are required",
       });
     }
 
-    const existingDepartment = await Department.findOne({
-      $or: [{ name }, { code }],
+    const existingCourse = await Course.findOne({
+      name,
     });
 
-    if (existingDepartment) {
+    if (existingCourse) {
       return res.status(409).json({
-        message: "Department already exists",
+        message: "Course already exists",
       });
     }
 
@@ -41,7 +41,7 @@ export const createDepartment = async (
         });
       }
 
-      const existingMajor = await Department.findOne({
+      const existingMajor = await Course.findOne({
         "majors.name": {
           $in: majors.map((m: any) => m.name),
         },
@@ -54,16 +54,15 @@ export const createDepartment = async (
       }
     }
 
-    const department = await Department.create({
-      code,
+    const course = await Course.create({
       name,
       description,
       majors: majors || [],
     });
 
     return res.status(201).json({
-      message: "Department created successfully",
-      department,
+      message: "Course created successfully",
+      course,
     });
   } catch (error) {
     console.error(error);
@@ -74,16 +73,17 @@ export const createDepartment = async (
   }
 };
 
-export const getDepartments = async (
+/* GET ALL COURSES */
+export const getCourses = async (
   _req: Request,
   res: Response
 ) => {
   try {
-    const departments = await Department.find().sort({
+    const courses = await Course.find().sort({
       createdAt: -1,
     });
 
-    return res.json(departments);
+    return res.json(courses);
   } catch (error) {
     console.error(error);
 
@@ -93,7 +93,8 @@ export const getDepartments = async (
   }
 };
 
-export const updateDepartment = async (
+/* UPDATE COURSE */
+export const updateCourse = async (
   req: Request,
   res: Response
 ) => {
@@ -101,7 +102,6 @@ export const updateDepartment = async (
     const { id } = req.params;
 
     const {
-      code,
       name,
       description,
       majors,
@@ -124,10 +124,20 @@ export const updateDepartment = async (
       }
     }
 
-    const department = await Department.findByIdAndUpdate(
+    const existingCourse = await Course.findOne({
+      name,
+      _id: { $ne: id },
+    });
+
+    if (existingCourse) {
+      return res.status(409).json({
+        message: "Course name already exists",
+      });
+    }
+
+    const course = await Course.findByIdAndUpdate(
       id,
       {
-        code,
         name,
         description,
         majors,
@@ -135,15 +145,15 @@ export const updateDepartment = async (
       { new: true }
     );
 
-    if (!department) {
+    if (!course) {
       return res.status(404).json({
-        message: "Department not found",
+        message: "Course not found",
       });
     }
 
     return res.json({
-      message: "Department updated successfully",
-      department,
+      message: "Course updated successfully",
+      course,
     });
   } catch (error) {
     console.error(error);
@@ -154,23 +164,26 @@ export const updateDepartment = async (
   }
 };
 
-export const deleteDepartment = async (
+/* DELETE COURSE */
+export const deleteCourse = async (
   req: Request,
   res: Response
 ) => {
   try {
     const { id } = req.params;
 
-    const department = await Department.findByIdAndDelete(id);
+    const course = await Course.findByIdAndDelete(
+      id
+    );
 
-    if (!department) {
+    if (!course) {
       return res.status(404).json({
-        message: "Department not found",
+        message: "Course not found",
       });
     }
 
     return res.json({
-      message: "Department deleted successfully",
+      message: "Course deleted successfully",
     });
   } catch (error) {
     console.error(error);

@@ -4,8 +4,7 @@ export interface IMajor {
   name: string;
 }
 
-export interface IDepartment extends Document {
-  code: string;
+export interface ICourse extends Document {
   name: string;
   description: string;
   majors: IMajor[];
@@ -13,7 +12,7 @@ export interface IDepartment extends Document {
   updatedAt: Date;
 }
 
-const MajorSchema = new Schema<IMajor>(
+const MajorSchema = new Schema(
   {
     name: {
       type: String,
@@ -24,16 +23,8 @@ const MajorSchema = new Schema<IMajor>(
   { _id: false }
 );
 
-const DepartmentSchema = new Schema<IDepartment>(
+const CourseSchema = new Schema(
   {
-    code: {
-      type: String,
-      required: true,
-      trim: true,
-      uppercase: true,
-      unique: true,
-    },
-
     name: {
       type: String,
       required: true,
@@ -52,10 +43,12 @@ const DepartmentSchema = new Schema<IDepartment>(
       default: [],
     },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+  }
 );
 
-export const Department = mongoose.model<IDepartment>(
-  "Department",
-  DepartmentSchema
+export const Course = mongoose.model<ICourse>(
+  "Course",
+  CourseSchema
 );
