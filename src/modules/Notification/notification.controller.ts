@@ -462,30 +462,41 @@ export const deleteNotification = async (
   }
 };
 
-export const getAllNotifications = async (req: Request, res: Response) => {
-
+export const getAllNotifications = async (
+  req: Request,
+  res: Response
+) => {
   try {
     const notifications = await Notification.find()
-
       .populate(
         "sender",
         "firstName lastName avatar"
       )
-
-      .populate(
-        "eventId",
-        "title imageUrl"
-      )
-
+      .populate({
+        path: "eventId",
+        select: `
+          title
+          imageUrl
+          date
+          time
+          endTime
+          description
+          status
+          isForAllStudents
+          targetDepartments
+          targetYearLevels
+          targetMajors
+          targetSections
+        `,
+      })
       .sort({
-        createdAt: -1
+        createdAt: -1,
       });
 
     return res.status(200).json({
       success: true,
       notifications,
     });
-
   } catch (error) {
     console.error(
       "Error fetching notifications:",
