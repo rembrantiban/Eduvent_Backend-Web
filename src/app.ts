@@ -62,7 +62,7 @@ app.get("/api/ping", (req, res) => {
 app.use("/api/auth", userRoutes);
 app.use("/api/event", eventRoutes);
 app.use("/api/location", locationRoutes);
-app.use("/api/department", departmentRoutes);
+app.use("/api/course", departmentRoutes);
 app.use("/api/attendance", attendanceRoutes);
 app.use("/api/notifications", notificationRoutes);
 
