@@ -256,7 +256,7 @@ export const getAnnouncements = async (req: Request, res: Response) => {
         )
 
         .populate({
-          path:"eventId",
+          path: "eventId",
           select:
             "title description status imageUrl date time endTime locationId targetDepartments targetYearLevels targetMajors targetSections isForAllStudents",
           populate: {
@@ -511,7 +511,7 @@ export const getAllNotifications = async (
   }
 };
 
- export const countUserUnreadNotification = async (
+export const countUserUnreadNotification = async (
   req: Request,
   res: Response
 ) => {
@@ -626,7 +626,7 @@ export const getNotificationById = async (
           path: "locationId",
           select: "venue",
         },
-      });
+      })
 
     if (!notification) {
       return res.status(404).json({
