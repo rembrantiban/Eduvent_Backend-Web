@@ -44,7 +44,7 @@ export const getAttendanceAnalytics = async (
                 role: "student",
 
                 ...(event.targetDepartments?.length && {
-                    department: {
+                    course: {
                         $in: event.targetDepartments,
                     },
                 }),
@@ -382,7 +382,7 @@ export const getOngoingEventAttendanceAnalytics = async (
       {
         $group: {
           _id: {
-            department: "$user.department",
+            course: "$user.course",
             major: "$user.major",
             section: "$user.section",
           },
@@ -395,7 +395,7 @@ export const getOngoingEventAttendanceAnalytics = async (
       attendance.map(async (item) => {
         const totalStudents =
           await User.countDocuments({
-            department: item._id.department,
+            course: item._id.course,
             major: item._id.major,
             section: item._id.section,
             role: "student",
@@ -412,7 +412,7 @@ export const getOngoingEventAttendanceAnalytics = async (
             : 0;
 
         return {
-          department: item._id.department,
+          course: item._id.course,
           major: item._id.major,
           section: item._id.section,
 
@@ -493,8 +493,8 @@ export const getOngoingEventAttendanceAnalytics = async (
                   studentId:
                     "$user.studentId",
 
-                  department:
-                    "$user.department",
+                  course:
+                    "$user.course",
 
                   major:
                     "$user.major",
