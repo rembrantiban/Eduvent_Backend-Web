@@ -14,7 +14,6 @@ export const createLocation = async (req: Request, res: Response) => {
 
     const existingLocation = await Location.findOne({
       venue: { $regex: `^${venue}$`, $options: "i" },
-      location: { $regex: `^${location}$`, $options: "i" },
     });
 
     if (existingLocation) {

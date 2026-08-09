@@ -15,12 +15,10 @@ const LocationSchema = new Schema<ILocation>(
       type: String,
       required: true,
       trim: true,
-      unique: true,
     },
 
     location: {
       type: String,
-      required: true,
       trim: true,
       unique: true
     },
