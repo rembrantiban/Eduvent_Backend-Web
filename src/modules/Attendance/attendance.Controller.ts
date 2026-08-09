@@ -593,7 +593,7 @@ export class AttendanceController {
                     lastName: "$user.lastName",
                     email: "$user.email",
                     studentId: "$user.studentId",
-                    department: "$user.department",
+                    course: "$user.course",
                     major: "$user.major",
                     section: "$user.section",
                     yearLevel: "$user.yearLevel"
