@@ -9,7 +9,7 @@ export const requireCompleteProfile = (
   if (
     req.user.role === "student" &&
     (!req.user.yearLevel ||
-     !req.user.department ||
+     !req.user.course ||
      !req.user.section)
   ) {
     return res.status(403).json({
