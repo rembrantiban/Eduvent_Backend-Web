@@ -12,7 +12,7 @@ const SALT_ROUNDS = 12;
 
 export const signupUser = async (req: Request, res: Response) => {
   try {
-    const { firstName, lastName, email, password, role, studentId, yearLevel, major, department, section } = req.body;
+    const { firstName, lastName, email, password, role, studentId, yearLevel, major, course, section } = req.body;
 
     if (!firstName || !lastName || !email || !password || !role) {
       return res.status(400).json({ message: "Please provide all required fields." });
@@ -34,7 +34,7 @@ export const signupUser = async (req: Request, res: Response) => {
       }
     }
     if (role === "CSSG_officer") {
-      if (!studentId || !yearLevel || !department || !section) {
+      if (!studentId || !yearLevel || !course || !section) {
         return res.status(400).json({
           message: "All student fields are required for this role."
         });
@@ -71,7 +71,7 @@ export const signupUser = async (req: Request, res: Response) => {
       newUser.studentId = studentId;
       newUser.yearLevel = yearLevel;
       newUser.major = major;
-      newUser.department = department;
+      newUser.course = course;
       newUser.section = section;
     }
 
@@ -93,7 +93,7 @@ export const signupUser = async (req: Request, res: Response) => {
         role: createdUser.role,
         studentId: createdUser.studentId,
         yearLevel: createdUser.yearLevel,
-        department: createdUser.department,
+        course: createdUser.course,
         major: createdUser.major,
         section: createdUser.section,
       },
@@ -169,7 +169,7 @@ export const createUserByTeacher = async (
       return res.status(403).json({ message: "Forbidden" });
     }
 
-    const department = req.user.department;
+    const course = req.user.course;
 
     // Default password
     const hashedPassword = await bcrypt.hash(password, 12);
@@ -180,7 +180,7 @@ export const createUserByTeacher = async (
       email,
       password: hashedPassword,
       role,
-      department,
+      course,
       ...(role === "student" && {
         studentId,
         yearLevel,
@@ -197,7 +197,7 @@ export const createUserByTeacher = async (
         lastName: newUser.lastName,
         email: newUser.email,
         role: newUser.role,
-        department: newUser.department,
+        course: newUser.course,
         major: newUser.major,
       },
     });
@@ -228,7 +228,7 @@ export const createUserByAdmin = async (
       email,
       password,
       role,
-      department,
+      course,
       studentId,
       yearLevel,
       section,
@@ -243,7 +243,7 @@ export const createUserByAdmin = async (
     }
 
     // ✅ Required fields
-    if (!firstName || !lastName || !email || !password || !role || !department) {
+    if (!firstName || !lastName || !email || !password || !role || !course) {
       return res.status(400).json({
         message: "Missing required fields.",
       });
@@ -290,7 +290,7 @@ export const createUserByAdmin = async (
       email,
       password: hashedPassword,
       role,
-      department,
+      course,
       ...(role === "student" || role === "CSSG_officer") && {
         major,
         studentId,
@@ -307,7 +307,7 @@ export const createUserByAdmin = async (
         lastName: newUser.lastName,
         email: newUser.email,
         role: newUser.role,
-        department: newUser.department,
+        course: newUser.course,
         major: newUser.major,
       },
     });
@@ -338,7 +338,7 @@ export const updateUser = async (req: Request, res: Response) => {
       lastName,
       email,
       role,
-      department,
+      course,
       major,
       studentId,
       yearLevel,
@@ -363,9 +363,9 @@ export const updateUser = async (req: Request, res: Response) => {
         });
       }
 
-      if (userToUpdate.department !== currentUser.department) {
+      if (userToUpdate.course !== currentUser.course) {
         return res.status(403).json({
-          message: "You can only update users in your department.",
+          message: "You can only update users in your course.",
         });
       }
     }
@@ -415,7 +415,7 @@ export const updateUser = async (req: Request, res: Response) => {
       lastName: lastName?.trim(),
       email,
       role,
-      department,
+      course,
     };
 
     if (isStudentRole) {
@@ -522,7 +522,7 @@ export const loginAdmin = async (req: Request, res: Response) => {
         lastName: user.lastName,
         email: user.email,
         role: user.role,
-        department: user.department,
+        course: user.course,
         avatar: user.avatar,
         isFaceRegistered: user.isFaceRegistered
       },
@@ -565,7 +565,7 @@ export const getCurrentUser = async (
         role: user.role,
         avatar: user.avatar,
         studentId: user.studentId,
-        department: user.department,
+        course: user.course,
         major: user.major,
         yearLevel: user.yearLevel,
         section: user.section,
@@ -626,7 +626,7 @@ export const loginUser = async (req: Request, res: Response) => {
 
     const isProfileComplete =
       user.role !== "student" && user.role !=="CSSG_officer" ||
-      (user.yearLevel && user.department && user.section && user.major);
+      (user.yearLevel && user.course && user.section && user.major);
 
 
     const token = jwt.sign(
@@ -635,7 +635,7 @@ export const loginUser = async (req: Request, res: Response) => {
         role: user.role,
         email: user.email,
         studentId: user.studentId,
-        department: user.department,
+        course: user.course,
         section: user.section,
         yearLevel: user.yearLevel,
         major: user.major,
@@ -656,7 +656,7 @@ export const loginUser = async (req: Request, res: Response) => {
         role: user.role,
         studentId: user.studentId,
         yearLevel: user.yearLevel,
-        department: user.department,
+        course: user.course,
         major: user.major,
         section: user.section,
         profileCompleted: isProfileComplete,
@@ -682,10 +682,10 @@ export const completeProfile = async (req: Request, res: Response) => {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    const { yearLevel, department, section, major } = req.body;
+    const { yearLevel, course, section, major } = req.body;
     const userId = req.user._id;
 
-    if (!yearLevel || !department || !section || !major) {
+    if (!yearLevel || !course || !section || !major) {
       return res.status(400).json({
         message: "Please provide all required fields.",
       });
@@ -695,7 +695,7 @@ export const completeProfile = async (req: Request, res: Response) => {
       userId,
       {
         yearLevel: yearLevel.trim(),
-        department: department.trim(),
+        course: course.trim(),
         section: section.trim(),
         major: major.trim(),
       },
@@ -717,9 +717,9 @@ export const completeProfile = async (req: Request, res: Response) => {
 export const updateUserProfileForStudent = async (req: Request, res: Response) => {
   try {
     const userId = req.user?._id;
-    const { firstName, lastName, yearLevel, department, section, major } = req.body;
+    const { firstName, lastName, yearLevel, course, section, major } = req.body;
 
-    if (!firstName || !lastName || !yearLevel || !department || !section || !major) {
+    if (!firstName || !lastName || !yearLevel || !course || !section || !major) {
       return res.status(400).json({
         message: "All fields are required",
       });
@@ -756,7 +756,7 @@ export const updateUserProfileForStudent = async (req: Request, res: Response) =
       firstName: firstName.trim(),
       lastName: lastName.trim(),
       yearLevel: yearLevel.trim(),
-      department: department.trim(),
+      course: course.trim(),
       major: major.trim(),
       section: section.trim()
     };
@@ -1037,7 +1037,7 @@ export const checkUserAuth = async (req: Request, res: Response) => {
         studentId: req.user.studentId,
         yearLevel: req.user.yearLevel,
         section: req.user.section,
-        department: req.user.department,
+        course: req.user.course,
         avatar: req.user.avatar,
       },
     });
@@ -1049,7 +1049,7 @@ export const checkUserAuth = async (req: Request, res: Response) => {
 };
 
 
-export const getUsersSameDepartment = async (
+export const getUsersSameCourse = async (
   req: Request,
   res: Response
 ) => {
@@ -1058,14 +1058,14 @@ export const getUsersSameDepartment = async (
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    if (!req.user.department) {
+    if (!req.user.course) {
       return res
         .status(400)
-        .json({ message: "User has no department assigned" });
+        .json({ message: "User has no course assigned" });
     }
 
     const users = await User.find({
-      department: req.user.department,
+      course: req.user.course,
       role: { $ne: "teacher" },
     }).select("-password");
 
@@ -1077,7 +1077,7 @@ export const getUsersSameDepartment = async (
         email: user.email,
         role: user.role,
         section: user.section,
-        department: user.department,
+        course: user.course,
         studentId: user.studentId,
         yearLevel: user.yearLevel,
 
@@ -1129,7 +1129,7 @@ export const getAllUsers = async (req: Request, res: Response) => {
         email: user.email,
         role: user.role,
         section: user.section,
-        department: user.department,
+        course: user.course,
         major: user.major,
         studentId: user.studentId,
         yearLevel: user.yearLevel,

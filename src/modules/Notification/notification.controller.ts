@@ -73,7 +73,7 @@ export const sendEventNotification = async (
 
         query.$and.push({
 
-          department: {
+          course: {
             $in:
               event.targetDepartments,
           },
@@ -290,7 +290,7 @@ export const getAnnouncements = async (req: Request, res: Response) => {
           const departmentMatch =
             !event.targetDepartments?.length ||
             event.targetDepartments.includes(
-              req.user.department
+              req.user.course
             );
 
           const yearMatch =
@@ -539,7 +539,7 @@ export const getAllNotifications = async (
         const departmentMatch =
           !event.targetDepartments?.length ||
           event.targetDepartments.includes(
-            req.user.department
+            req.user.course
           );
 
         const yearMatch =

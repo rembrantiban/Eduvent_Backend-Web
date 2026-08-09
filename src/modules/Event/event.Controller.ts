@@ -330,7 +330,7 @@ export const getStudentEvents = async (
 
         {
           targetDepartments: {
-            $in: [user.department],
+            $in: [user.course],
           },
         },
 

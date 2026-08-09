@@ -11,7 +11,7 @@ import {
          loginAdmin,
          logoutUser,
          checkUserAuth,
-         getUsersSameDepartment,
+         getUsersSameCourse,
          createUserByTeacher,
          getAllUsers,
          createUserByAdmin,
@@ -46,7 +46,7 @@ router.post("/resend-reset-code", resendResetCode);
 router.post("/create-user-by-teacher", requireAuth, createUserByTeacher);
 router.post("/create-user-by-admin", requireAuth, createUserByAdmin);
 router.get("/get-all-users", requireAuth, getAllUsers);
-router.get("/get-users-same-department", requireAuth, getUsersSameDepartment);
+router.get("/get-users-same-course", requireAuth, getUsersSameCourse);
 router.get("/get-total-users", getTotalUsers);
 router.delete("/delete-user/:id", requireAuth, deleteUserAccount);
 router.post("/save-push-token", MobileAuth, savePushToken);

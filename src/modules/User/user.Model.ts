@@ -19,7 +19,7 @@ export interface IUser extends Document {
   // Student-specific fields
   studentId?: string;
   yearLevel?: string;
-  department?: string;
+  course?: string;
   major: string;
   section?: string;
   createdAt: Date;
@@ -57,7 +57,7 @@ const UserSchema: Schema = new Schema<IUser>(
      // unique only if exists
     studentId: { type: String, unique: true, sparse: true },
     yearLevel: { type: String },
-    department: { type: String },
+    course: { type: String },
     major: { type: String },
     section: { type: String },
   },
