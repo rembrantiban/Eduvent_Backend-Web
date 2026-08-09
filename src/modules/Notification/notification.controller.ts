@@ -599,4 +599,60 @@ export const getAllNotifications = async (
   }
 };
 
+export const getNotificationById = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
 
+    const { id } = req.params;
+
+    const notification = await Notification.findById(id)
+      .populate(
+        "sender",
+        "firstName lastName avatar"
+      )
+      .populate({
+        path: "eventId",
+        select:
+          "title description status imageUrl date time endTime locationId targetDepartments targetYearLevels targetMajors targetSections isForAllStudents",
+        populate: {
+          path: "locationId",
+          select: "venue",
+        },
+      });
+
+    if (!notification) {
+      return res.status(404).json({
+        success: false,
+        message: "Notification not found",
+      });
+    }
+
+    const readRecord = await NotificationRead.findOne({
+      userId: req.user._id,
+      notificationId: notification._id,
+    });
+
+    return res.status(200).json({
+      success: true,
+      notification: {
+        ...notification.toObject(),
+        isRead: !!readRecord,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch notification",
+    });
+  }
+};
