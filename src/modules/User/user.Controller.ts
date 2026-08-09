@@ -692,17 +692,37 @@ export const loginUser = async (req: Request, res: Response) => {
 
 export const completeProfile = async (req: Request, res: Response) => {
   try {
-
     if (!req.user) {
-      return res.status(401).json({ message: "Unauthorized" });
+      return res.status(401).json({
+        message: "Unauthorized",
+      });
     }
 
     const { yearLevel, course, section, major } = req.body;
     const userId = req.user._id;
 
-    if (!yearLevel || !course || !section || !major) {
+    if (!yearLevel || !course || !section) {
       return res.status(400).json({
-        message: "Please provide all required fields.",
+        message: "Year level, course, and section are required.",
+      });
+    }
+
+    const selectedCourse = await Course.findOne({
+      name: course.trim(),
+    });
+
+    if (!selectedCourse) {
+      return res.status(404).json({
+        message: "Course not found.",
+      });
+    }
+
+    const hasMajors =
+      (selectedCourse.majors?.length ?? 0) > 0;
+
+    if (hasMajors && !major?.trim()) {
+      return res.status(400).json({
+        message: "Please select a major for this course.",
       });
     }
 
@@ -712,10 +732,19 @@ export const completeProfile = async (req: Request, res: Response) => {
         yearLevel: yearLevel.trim(),
         course: course.trim(),
         section: section.trim(),
-        major: major.trim(),
+
+        major: hasMajors ? major.trim() : "",
       },
-      { new: true }
+      {
+        new: true,
+      }
     );
+
+    if (!updatedUser) {
+      return res.status(404).json({
+        message: "User not found.",
+      });
+    }
 
     return res.status(200).json({
       message: "Profile completed successfully",
@@ -723,11 +752,13 @@ export const completeProfile = async (req: Request, res: Response) => {
     });
 
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Internal server error" });
+    console.error("Complete profile error:", err);
+
+    return res.status(500).json({
+      message: "Internal server error",
+    });
   }
 };
-
 
 export const updateUserProfileForStudent = async (req: Request, res: Response) => {
   try {
