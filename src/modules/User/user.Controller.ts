@@ -8,6 +8,8 @@ import { resend } from "../../common/lib/resend";
 import cloudinary from "../../config/cloudinary"
 import canAssignRole from "../../common/utils/roles"
 import { emailTemplate } from "../../services/EmailTemplate.services";
+import { Course } from "../Department/department.Model"
+
 const SALT_ROUNDS = 12;
 
 export const signupUser = async (req: Request, res: Response) => {
@@ -603,8 +605,8 @@ export const loginUser = async (req: Request, res: Response) => {
         { studentId: normalizedIdentifier },
       ],
     }).select("+password");
-    
-    if(user && user.isActive === false) {
+
+    if (user && user.isActive === false) {
       return res.status(401).json({
         message: "Your account is deactivated. Please contact admin.",
       });
@@ -624,10 +626,23 @@ export const loginUser = async (req: Request, res: Response) => {
       });
     }
 
-    const isProfileComplete =
-      user.role !== "student" && user.role !=="CSSG_officer" ||
-      (user.yearLevel && user.course && user.section && user.major);
+    let isProfileComplete = true;
 
+    if (user.role === "student" || user.role === "CSSG_officer") {
+      const selectedCourse = await Course.findOne({
+        name: user.course,
+      });
+
+      const hasMajors =
+        (selectedCourse?.majors?.length ?? 0) > 0;
+
+      isProfileComplete = Boolean(
+        user.yearLevel &&
+        user.course &&
+        user.section &&
+        (!hasMajors || user.major)
+      );
+    }
 
     const token = jwt.sign(
       {
@@ -906,10 +921,10 @@ export const resetPassword = async (req: Request, res: Response) => {
 
     user.password = await bcrypt.hash(newPassword, 12);
 
-     // Cleanup
-     // user.resetPasswordCode = undefined;
+    // Cleanup
+    // user.resetPasswordCode = undefined;
     //  user.resetPasswordExpires = undefined;
-   // user.resetPasswordVerified = undefined;
+    // user.resetPasswordVerified = undefined;
 
     await user.save();
 
@@ -1404,100 +1419,100 @@ export const updateUserRole = async (req: any, res: any) => {
 };
 
 export const changeStudentPassword = async (
-    req: Request,
-    res: Response
-  ) => {
+  req: Request,
+  res: Response
+) => {
 
-    try {
+  try {
 
-      const userId =
-        req.user._id;
+    const userId =
+      req.user._id;
 
-      const {
-        currentPassword,
-        newPassword,
-        confirmPassword,
-      } = req.body;
+    const {
+      currentPassword,
+      newPassword,
+      confirmPassword,
+    } = req.body;
 
-      // VALIDATE
-      if (
-        !currentPassword ||
-        !newPassword ||
-        !confirmPassword
-      ) {
+    // VALIDATE
+    if (
+      !currentPassword ||
+      !newPassword ||
+      !confirmPassword
+    ) {
 
-        return res.status(400).json({
-          message:
-            "All fields are required",
-        });
-      }
-
-      // PASSWORD MATCH
-      if (
-        newPassword !==
-        confirmPassword
-      ) {
-
-        return res.status(400).json({
-          message:
-            "Passwords do not match",
-        });
-      }
-
-      const user =
-        await User.findById(
-          userId
-        );
-
-      if (!user) {
-
-        return res.status(404).json({
-          message:
-            "User not found",
-        });
-      }
-
-      const isMatch =
-        await bcrypt.compare(
-          currentPassword,
-          user.password
-        );
-
-      if (!isMatch) {
-
-        return res.status(400).json({
-          message:
-            "Current password is incorrect",
-        });
-      }
-
-      const hashedPassword =
-        await bcrypt.hash(
-          newPassword,
-          12
-        );
-
-      user.password =
-        hashedPassword;
-
-      await user.save();
-
-      res.status(200).json({
-        success: true,
+      return res.status(400).json({
         message:
-          "Password updated successfully",
-      });
-
-    } catch (error) {
-
-      console.log(
-        "CHANGE PASSWORD ERROR:",
-        error
-      );
-
-      res.status(500).json({
-        message:
-          "Server error",
+          "All fields are required",
       });
     }
+
+    // PASSWORD MATCH
+    if (
+      newPassword !==
+      confirmPassword
+    ) {
+
+      return res.status(400).json({
+        message:
+          "Passwords do not match",
+      });
+    }
+
+    const user =
+      await User.findById(
+        userId
+      );
+
+    if (!user) {
+
+      return res.status(404).json({
+        message:
+          "User not found",
+      });
+    }
+
+    const isMatch =
+      await bcrypt.compare(
+        currentPassword,
+        user.password
+      );
+
+    if (!isMatch) {
+
+      return res.status(400).json({
+        message:
+          "Current password is incorrect",
+      });
+    }
+
+    const hashedPassword =
+      await bcrypt.hash(
+        newPassword,
+        12
+      );
+
+    user.password =
+      hashedPassword;
+
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message:
+        "Password updated successfully",
+    });
+
+  } catch (error) {
+
+    console.log(
+      "CHANGE PASSWORD ERROR:",
+      error
+    );
+
+    res.status(500).json({
+      message:
+        "Server error",
+    });
+  }
 };
