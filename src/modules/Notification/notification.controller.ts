@@ -604,6 +604,7 @@ export const getNotificationById = async (
   res: Response
 ) => {
   try {
+    
     if (!req.user) {
       return res.status(401).json({
         success: false,
@@ -628,6 +629,9 @@ export const getNotificationById = async (
         },
       })
 
+      console.log(
+  JSON.stringify(notification?.eventId, null, 2)
+)
     if (!notification) {
       return res.status(404).json({
         success: false,

@@ -12,17 +12,6 @@ export const createLocation = async (req: Request, res: Response) => {
       });
     }
 
-    const existingLocation = await Location.findOne({
-      venue: { $regex: `^${venue}$`, $options: "i" },
-    });
-
-    if (existingLocation) {
-      return res.status(409).json({
-        success: false,
-        message: "Location already exists",
-      });
-    }
-
     const newLocation = await Location.create({
       venue,
       location,
@@ -58,19 +47,6 @@ export const updateLocation = async (req: Request, res: Response) => {
       return res.status(400).json({
         success: false,
         message: "Venue, location, latitude and longitude are required"
-      });
-    }
-
-    const existingLocation = await Location.findOne({
-      venue: { $regex: `^${venue}$`, $options: "i" },
-      location: { $regex: `^${location}$`, $options: "i" },
-      _id: { $ne: id }
-    });
-
-    if (existingLocation) {
-      return res.status(409).json({
-        success: false,
-        message: "Location already exists"
       });
     }
 
