@@ -5,7 +5,7 @@ export const createLocation = async (req: Request, res: Response) => {
   try {
     const { venue, location, latitude, longitude } = req.body;
 
-    if (!venue || !location || !latitude || !longitude) {
+    if (!venue || !location || latitude === undefined ||  longitude === undefined ) {
       return res.status(400).json({
         success: false,
         message: "Venue, location, latitude and longitude are required",
