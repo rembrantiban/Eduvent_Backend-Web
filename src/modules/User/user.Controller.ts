@@ -765,7 +765,7 @@ export const updateUserProfileForStudent = async (req: Request, res: Response) =
     const userId = req.user?._id;
     const { firstName, lastName, yearLevel, course, section, major } = req.body;
 
-    if (!firstName || !lastName || !yearLevel || !course || !section || !major) {
+    if (!firstName || !lastName || !yearLevel || !course || !section) {
       return res.status(400).json({
         message: "All fields are required",
       });
