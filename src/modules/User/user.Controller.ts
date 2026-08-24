@@ -20,16 +20,6 @@ export const signupUser = async (req: Request, res: Response) => {
       return res.status(400).json({ message: "Please provide all required fields." });
     }
 
-    if (!validator.isStrongPassword(password, {
-      minLength: 6,
-      minNumbers: 1,
-      minLowercase: 1,
-      minUppercase: 0,
-      minSymbols: 0
-    })) {
-      return res.status(400).json({ message: "Password must be at least 6 characters and contain at least 1 number and 1 letter." });
-    }
-
     if (role === "student") {
       if (!studentId || !firstName || !lastName || !password || !email) {
         return res.status(400).json({ message: "Student ID, first name, last name, and password are required for students." });
