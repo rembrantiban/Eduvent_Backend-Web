@@ -44,7 +44,6 @@ const LocationSchema = new mongoose_1.Schema({
     location: {
         type: String,
         trim: true,
-        unique: true
     },
     latitude: {
         type: Number,

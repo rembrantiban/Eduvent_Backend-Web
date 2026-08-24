@@ -20,7 +20,6 @@ const LocationSchema = new Schema<ILocation>(
     location: {
       type: String,
       trim: true,
-      unique: true
     },
     
     latitude: {

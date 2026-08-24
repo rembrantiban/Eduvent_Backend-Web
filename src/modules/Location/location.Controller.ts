@@ -28,6 +28,13 @@ export const createLocation = async (req: Request, res: Response) => {
 
     console.error("Create location error:", error);
 
+    if (error.code === 11000) {
+      return res.status(409).json({
+        success: false,
+        message: "A location with this venue and location already exists",
+      });
+    }
+
     return res.status(500).json({
       success: false,
       message: "Failed to create location",

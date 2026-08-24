@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import dotenv from "dotenv";
+import { Location } from "../modules/Location/location.Model";
 
 dotenv.config();
 
@@ -12,6 +13,9 @@ export const connectDB = async () => {
   try {
     await mongoose.connect(MONGO_URI);
     console.log("MongoDB connected Successfully!");
+
+    await Location.syncIndexes();
+    console.log("Location indexes synced");
   } catch (err) {
     console.error("MongoDB connection error:", err);
     process.exit(1);

@@ -7,7 +7,6 @@ exports.changeStudentPassword = exports.updateUserRole = exports.updatePassword 
 const user_Model_1 = require("./user.Model");
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
-const validator_1 = __importDefault(require("validator"));
 const crypto_1 = __importDefault(require("crypto"));
 const resend_1 = require("../../common/lib/resend");
 const cloudinary_1 = __importDefault(require("../../config/cloudinary"));
@@ -21,25 +20,9 @@ const signupUser = async (req, res) => {
         if (!firstName || !lastName || !email || !password || !role) {
             return res.status(400).json({ message: "Please provide all required fields." });
         }
-        if (!validator_1.default.isStrongPassword(password, {
-            minLength: 6,
-            minNumbers: 1,
-            minLowercase: 1,
-            minUppercase: 0,
-            minSymbols: 0
-        })) {
-            return res.status(400).json({ message: "Password must be at least 6 characters and contain at least 1 number and 1 letter." });
-        }
         if (role === "student") {
             if (!studentId || !firstName || !lastName || !password || !email) {
                 return res.status(400).json({ message: "Student ID, first name, last name, and password are required for students." });
-            }
-        }
-        if (role === "CSSG_officer") {
-            if (!studentId || !yearLevel || !course || !section) {
-                return res.status(400).json({
-                    message: "All student fields are required for this role."
-                });
             }
         }
         // Check if email exists

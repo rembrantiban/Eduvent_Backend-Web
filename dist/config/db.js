@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.connectDB = void 0;
 const mongoose_1 = __importDefault(require("mongoose"));
 const dotenv_1 = __importDefault(require("dotenv"));
+const location_Model_1 = require("../modules/Location/location.Model");
 dotenv_1.default.config();
 const MONGO_URI = process.env.MONGO_URL;
 if (!MONGO_URI) {
@@ -15,6 +16,8 @@ const connectDB = async () => {
     try {
         await mongoose_1.default.connect(MONGO_URI);
         console.log("MongoDB connected Successfully!");
+        await location_Model_1.Location.syncIndexes();
+        console.log("Location indexes synced");
     }
     catch (err) {
         console.error("MongoDB connection error:", err);
