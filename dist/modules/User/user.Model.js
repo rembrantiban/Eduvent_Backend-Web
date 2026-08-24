@@ -55,7 +55,7 @@ const UserSchema = new mongoose_1.Schema({
     // unique only if exists
     studentId: { type: String, unique: true, sparse: true },
     yearLevel: { type: String },
-    department: { type: String },
+    course: { type: String },
     major: { type: String },
     section: { type: String },
 }, { timestamps: true });

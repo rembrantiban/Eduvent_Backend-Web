@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.Department = void 0;
+exports.Course = void 0;
 const mongoose_1 = __importStar(require("mongoose"));
 const MajorSchema = new mongoose_1.Schema({
     name: {
@@ -42,14 +42,7 @@ const MajorSchema = new mongoose_1.Schema({
         trim: true,
     },
 }, { _id: false });
-const DepartmentSchema = new mongoose_1.Schema({
-    code: {
-        type: String,
-        required: true,
-        trim: true,
-        uppercase: true,
-        unique: true,
-    },
+const CourseSchema = new mongoose_1.Schema({
     name: {
         type: String,
         required: true,
@@ -65,6 +58,8 @@ const DepartmentSchema = new mongoose_1.Schema({
         type: [MajorSchema],
         default: [],
     },
-}, { timestamps: true });
-exports.Department = mongoose_1.default.model("Department", DepartmentSchema);
+}, {
+    timestamps: true,
+});
+exports.Course = mongoose_1.default.model("Course", CourseSchema);
 //# sourceMappingURL=department.Model.js.map

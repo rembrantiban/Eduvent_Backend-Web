@@ -40,11 +40,9 @@ const LocationSchema = new mongoose_1.Schema({
         type: String,
         required: true,
         trim: true,
-        unique: true,
     },
     location: {
         type: String,
-        required: true,
         trim: true,
         unique: true
     },

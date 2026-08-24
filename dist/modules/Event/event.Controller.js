@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getTotalOngoingEvents = exports.getTotalUpComingEvents = exports.getFinishedEvents = exports.getUpComingEvents = exports.updateEventStatusToCanceled = exports.deleteEvent = exports.updateEvent = exports.getStudentEvents = exports.getEvents = exports.createEvent = void 0;
+exports.getFinishedEventTitles = exports.getEventStatusAnalytics = exports.getEventTrends = exports.getTotalOngoingEvents = exports.getTotalUpComingEvents = exports.getFinishedEvents = exports.getUpComingEvents = exports.updateEventStatusToCanceled = exports.deleteEvent = exports.updateEvent = exports.getStudentEvents = exports.getEvents = exports.createEvent = void 0;
 const event_Model_1 = require("./event.Model");
 const cloudinary_1 = __importDefault(require("../../config/cloudinary"));
 const mongoose_1 = __importDefault(require("mongoose"));
@@ -197,22 +197,19 @@ const getStudentEvents = async (req, res) => {
                 },
                 {
                     targetDepartments: {
-                        $in: [user.department],
+                        $in: [user.course],
                     },
                 },
-                /* MAJOR */
                 {
                     targetMajors: {
                         $in: [user.major],
                     },
                 },
-                /* YEAR LEVEL */
                 {
                     targetYearLevels: {
                         $in: [user.yearLevel],
                     },
                 },
-                /* SECTION */
                 {
                     targetSections: {
                         $in: [user.section],
@@ -220,10 +217,29 @@ const getStudentEvents = async (req, res) => {
                 },
             ],
         })
-            .populate("locationId")
+            .select(`
+        title
+        description
+        date
+        time
+        endTime
+        status
+        imageUrl
+        locationId
+      `)
+            .populate({
+            path: "locationId",
+            select: `
+    venue
+    location
+    latitude
+    longitude
+  `,
+        })
             .sort({
             date: 1,
-        });
+        })
+            .lean();
         return res.status(200).json({
             success: true,
             data: events,
@@ -520,4 +536,168 @@ const getTotalOngoingEvents = async (req, res) => {
     }
 };
 exports.getTotalOngoingEvents = getTotalOngoingEvents;
+const getEventTrends = async (req, res) => {
+    try {
+        const { type = "weekly" } = req.query;
+        if (type === "weekly") {
+            const result = await event_Model_1.Event.aggregate([
+                {
+                    $group: {
+                        _id: {
+                            $dayOfWeek: "$date",
+                        },
+                        events: {
+                            $sum: 1,
+                        },
+                    },
+                },
+            ]);
+            const days = [
+                "Sun",
+                "Mon",
+                "Tue",
+                "Wed",
+                "Thu",
+                "Fri",
+                "Sat",
+            ];
+            const data = days.map((day, index) => {
+                const found = result.find((r) => r._id === index + 1);
+                return {
+                    label: day,
+                    events: found?.events || 0,
+                };
+            });
+            return res.json({
+                success: true,
+                data,
+            });
+        }
+        if (type === "monthly") {
+            const result = await event_Model_1.Event.aggregate([
+                {
+                    $group: {
+                        _id: {
+                            $month: "$date",
+                        },
+                        events: {
+                            $sum: 1,
+                        },
+                    },
+                },
+            ]);
+            const months = [
+                "Jan",
+                "Feb",
+                "Mar",
+                "Apr",
+                "May",
+                "Jun",
+                "Jul",
+                "Aug",
+                "Sep",
+                "Oct",
+                "Nov",
+                "Dec",
+            ];
+            const data = months.map((month, index) => {
+                const found = result.find((r) => r._id === index + 1);
+                return {
+                    label: month,
+                    events: found?.events || 0,
+                };
+            });
+            return res.json({
+                success: true,
+                data,
+            });
+        }
+    }
+    catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: "Failed to fetch trends",
+        });
+    }
+};
+exports.getEventTrends = getEventTrends;
+const getEventStatusAnalytics = async (req, res) => {
+    try {
+        const completed = await event_Model_1.Event.countDocuments({
+            status: event_Model_1.EventStatus.FINISHED,
+        });
+        const ongoing = await event_Model_1.Event.countDocuments({
+            status: event_Model_1.EventStatus.ONGOING,
+        });
+        const upcoming = await event_Model_1.Event.countDocuments({
+            status: event_Model_1.EventStatus.UPCOMING,
+        });
+        const cancelled = await event_Model_1.Event.countDocuments({
+            status: event_Model_1.EventStatus.CANCELLED,
+        });
+        const total = completed +
+            ongoing +
+            upcoming +
+            cancelled;
+        const calculatePct = (value) => total > 0
+            ? `${Math.round((value / total) * 100)}%`
+            : "0%";
+        const data = [
+            {
+                name: "Completed",
+                value: completed,
+                color: "#0f766e",
+                pct: calculatePct(completed),
+            },
+            {
+                name: "Ongoing",
+                value: ongoing,
+                color: "#ec4899",
+                pct: calculatePct(ongoing),
+            },
+            {
+                name: "Upcoming",
+                value: upcoming,
+                color: "#8b5cf6",
+                pct: calculatePct(upcoming),
+            },
+            {
+                name: "Cancelled",
+                value: cancelled,
+                color: "#facc15",
+                pct: calculatePct(cancelled),
+            },
+        ];
+        return res.status(200).json({
+            success: true,
+            data,
+            total,
+        });
+    }
+    catch (error) {
+        console.error(error);
+        return res.status(500).json({
+            success: false,
+            message: "Failed to fetch event analytics",
+        });
+    }
+};
+exports.getEventStatusAnalytics = getEventStatusAnalytics;
+const getFinishedEventTitles = async (req, res) => {
+    try {
+        const events = await event_Model_1.Event.find({ status: event_Model_1.EventStatus.FINISHED }, { title: 1, _id: 1 } // only return id and title
+        ).sort({ date: -1 });
+        return res.status(200).json({
+            success: true,
+            data: events,
+        });
+    }
+    catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: "Failed to fetch finished events",
+        });
+    }
+};
+exports.getFinishedEventTitles = getFinishedEventTitles;
 //# sourceMappingURL=event.Controller.js.map

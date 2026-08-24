@@ -1,22 +1,22 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteDepartment = exports.updateDepartment = exports.getDepartments = exports.createDepartment = void 0;
+exports.deleteCourse = exports.updateCourse = exports.getCourses = exports.createCourse = void 0;
 const department_Model_1 = require("./department.Model");
-/* CREATE DEPARTMENT */
-const createDepartment = async (req, res) => {
+/* CREATE COURSE */
+const createCourse = async (req, res) => {
     try {
-        const { code, name, description, majors } = req.body;
-        if (!code || !name || !description) {
+        const { name, description, majors } = req.body;
+        if (!name || !description) {
             return res.status(400).json({
-                message: "Code, name, and description are required",
+                message: "Course name and description are required",
             });
         }
-        const existingDepartment = await department_Model_1.Department.findOne({
-            $or: [{ name }, { code }],
+        const existingCourse = await department_Model_1.Course.findOne({
+            name,
         });
-        if (existingDepartment) {
+        if (existingCourse) {
             return res.status(409).json({
-                message: "Department already exists",
+                message: "Course already exists",
             });
         }
         if (majors && majors.length > 0) {
@@ -27,7 +27,7 @@ const createDepartment = async (req, res) => {
                     message: "Duplicate majors are not allowed",
                 });
             }
-            const existingMajor = await department_Model_1.Department.findOne({
+            const existingMajor = await department_Model_1.Course.findOne({
                 "majors.name": {
                     $in: majors.map((m) => m.name),
                 },
@@ -38,15 +38,14 @@ const createDepartment = async (req, res) => {
                 });
             }
         }
-        const department = await department_Model_1.Department.create({
-            code,
+        const course = await department_Model_1.Course.create({
             name,
             description,
             majors: majors || [],
         });
         return res.status(201).json({
-            message: "Department created successfully",
-            department,
+            message: "Course created successfully",
+            course,
         });
     }
     catch (error) {
@@ -56,13 +55,14 @@ const createDepartment = async (req, res) => {
         });
     }
 };
-exports.createDepartment = createDepartment;
-const getDepartments = async (_req, res) => {
+exports.createCourse = createCourse;
+/* GET ALL COURSES */
+const getCourses = async (_req, res) => {
     try {
-        const departments = await department_Model_1.Department.find().sort({
+        const courses = await department_Model_1.Course.find().sort({
             createdAt: -1,
         });
-        return res.json(departments);
+        return res.json(courses);
     }
     catch (error) {
         console.error(error);
@@ -71,11 +71,12 @@ const getDepartments = async (_req, res) => {
         });
     }
 };
-exports.getDepartments = getDepartments;
-const updateDepartment = async (req, res) => {
+exports.getCourses = getCourses;
+/* UPDATE COURSE */
+const updateCourse = async (req, res) => {
     try {
         const { id } = req.params;
-        const { code, name, description, majors, } = req.body;
+        const { name, description, majors, } = req.body;
         if (majors && majors.length > 0) {
             const majorNames = majors.map((m) => m.name.trim().toLowerCase());
             const duplicateMajors = majorNames.filter((item, index) => majorNames.indexOf(item) !== index);
@@ -85,20 +86,28 @@ const updateDepartment = async (req, res) => {
                 });
             }
         }
-        const department = await department_Model_1.Department.findByIdAndUpdate(id, {
-            code,
+        const existingCourse = await department_Model_1.Course.findOne({
+            name,
+            _id: { $ne: id },
+        });
+        if (existingCourse) {
+            return res.status(409).json({
+                message: "Course name already exists",
+            });
+        }
+        const course = await department_Model_1.Course.findByIdAndUpdate(id, {
             name,
             description,
             majors,
         }, { new: true });
-        if (!department) {
+        if (!course) {
             return res.status(404).json({
-                message: "Department not found",
+                message: "Course not found",
             });
         }
         return res.json({
-            message: "Department updated successfully",
-            department,
+            message: "Course updated successfully",
+            course,
         });
     }
     catch (error) {
@@ -108,18 +117,19 @@ const updateDepartment = async (req, res) => {
         });
     }
 };
-exports.updateDepartment = updateDepartment;
-const deleteDepartment = async (req, res) => {
+exports.updateCourse = updateCourse;
+/* DELETE COURSE */
+const deleteCourse = async (req, res) => {
     try {
         const { id } = req.params;
-        const department = await department_Model_1.Department.findByIdAndDelete(id);
-        if (!department) {
+        const course = await department_Model_1.Course.findByIdAndDelete(id);
+        if (!course) {
             return res.status(404).json({
-                message: "Department not found",
+                message: "Course not found",
             });
         }
         return res.json({
-            message: "Department deleted successfully",
+            message: "Course deleted successfully",
         });
     }
     catch (error) {
@@ -129,5 +139,5 @@ const deleteDepartment = async (req, res) => {
         });
     }
 };
-exports.deleteDepartment = deleteDepartment;
+exports.deleteCourse = deleteCourse;
 //# sourceMappingURL=department.controller.js.map

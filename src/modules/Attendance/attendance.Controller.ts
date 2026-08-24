@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import cloudinary from "../../config/cloudinary";
 
 import { Attendance } from "./attendance.Model";
-import { Event } from "../Event/event.Model";
+import { Event, EventStatus } from "../Event/event.Model";
 import { Location } from "../Location/location.Model";
 import { calculateDistance } from "../../common/utils/distance";
 import mongoose from "mongoose";
@@ -539,7 +539,7 @@ export class AttendanceController {
   static async getEventAttendance(req: Request, res: Response) {
     try {
 
-      const { eventId } = req.params;
+      const eventId = String(req.params.eventId);
 
       const eventObjectId = new mongoose.Types.ObjectId(eventId);
 
@@ -851,7 +851,7 @@ export class AttendanceController {
       const missedEvents =
         await Event.countDocuments({
 
-          status: "Finished",
+          status: EventStatus.FINISHED,
 
           _id: {
             $nin: eventsJoined
@@ -863,7 +863,7 @@ export class AttendanceController {
 
       const upcomingEventsCount =
         await Event.countDocuments({
-          status: "Upcoming"
+          status: EventStatus.UPCOMING
         });
 
       return res.status(200).json({
@@ -1048,7 +1048,7 @@ export class AttendanceController {
       /* MISSED EVENTS */
       const missedCount =
         await Event.countDocuments({
-          status: "Finished",
+          status: EventStatus.FINISHED,
           _id: {
             $nin: joinedEventIds,
           },

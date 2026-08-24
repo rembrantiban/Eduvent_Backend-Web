@@ -19,10 +19,11 @@ router.put("/complete-profile", AuthCookieMiddleware_1.MobileAuth, user_Controll
 router.post("/request-password-reset", user_Controller_1.requestResetCode);
 router.post("/verify-password-reset", user_Controller_1.verifyResetCode);
 router.post("/confirm-password-reset", user_Controller_1.resetPassword);
+router.post("/resend-reset-code", user_Controller_1.resendResetCode);
 router.post("/create-user-by-teacher", authmiddleware_1.requireAuth, user_Controller_1.createUserByTeacher);
 router.post("/create-user-by-admin", authmiddleware_1.requireAuth, user_Controller_1.createUserByAdmin);
 router.get("/get-all-users", authmiddleware_1.requireAuth, user_Controller_1.getAllUsers);
-router.get("/get-users-same-department", authmiddleware_1.requireAuth, user_Controller_1.getUsersSameDepartment);
+router.get("/get-users-same-course", authmiddleware_1.requireAuth, user_Controller_1.getUsersSameCourse);
 router.get("/get-total-users", user_Controller_1.getTotalUsers);
 router.delete("/delete-user/:id", authmiddleware_1.requireAuth, user_Controller_1.deleteUserAccount);
 router.post("/save-push-token", AuthCookieMiddleware_1.MobileAuth, user_Controller_1.savePushToken);
@@ -31,5 +32,7 @@ router.put("/update-password", authmiddleware_1.requireAuth, user_Controller_1.u
 router.put("/update-profile-for-student", authmiddleware_1.requireAuth, multer_1.default.single("avatar"), user_Controller_1.updateUserProfileForStudent);
 router.put("/update-user-role/:id", authmiddleware_1.requireAuth, user_Controller_1.updateUserRole);
 router.put("/deactivate-user/:id", authmiddleware_1.requireAuth, user_Controller_1.DeactivateUserAccount);
+router.put("/change-password", AuthCookieMiddleware_1.MobileAuth, user_Controller_1.changeStudentPassword);
+router.get("/current-user", authmiddleware_1.requireAuth, user_Controller_1.getCurrentUser);
 exports.default = router;
 //# sourceMappingURL=user.Routes.js.map

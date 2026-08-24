@@ -5,20 +5,10 @@ const location_Model_1 = require("./location.Model");
 const createLocation = async (req, res) => {
     try {
         const { venue, location, latitude, longitude } = req.body;
-        if (!venue || !location || !latitude || !longitude) {
+        if (!venue || !location || latitude === undefined || longitude === undefined) {
             return res.status(400).json({
                 success: false,
                 message: "Venue, location, latitude and longitude are required",
-            });
-        }
-        const existingLocation = await location_Model_1.Location.findOne({
-            venue: { $regex: `^${venue}$`, $options: "i" },
-            location: { $regex: `^${location}$`, $options: "i" },
-        });
-        if (existingLocation) {
-            return res.status(409).json({
-                success: false,
-                message: "Location already exists",
             });
         }
         const newLocation = await location_Model_1.Location.create({
@@ -49,17 +39,6 @@ const updateLocation = async (req, res) => {
             return res.status(400).json({
                 success: false,
                 message: "Venue, location, latitude and longitude are required"
-            });
-        }
-        const existingLocation = await location_Model_1.Location.findOne({
-            venue: { $regex: `^${venue}$`, $options: "i" },
-            location: { $regex: `^${location}$`, $options: "i" },
-            _id: { $ne: id }
-        });
-        if (existingLocation) {
-            return res.status(409).json({
-                success: false,
-                message: "Location already exists"
             });
         }
         const updatedLocation = await location_Model_1.Location.findByIdAndUpdate(id, { venue, location, latitude, longitude }, { new: true });

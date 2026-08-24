@@ -8,7 +8,7 @@ const cors_1 = __importDefault(require("cors"));
 const cookie_parser_1 = __importDefault(require("cookie-parser"));
 const user_Routes_1 = __importDefault(require("./modules/User/user.Routes"));
 const event_routes_1 = __importDefault(require("./modules/Event/event.routes"));
-//import faceRoutes from "./modules/Face/face.routes"
+const mongoose_1 = __importDefault(require("mongoose"));
 const location_routes_1 = __importDefault(require("./modules/Location/location.routes"));
 const department_routes_1 = __importDefault(require("./modules/Department/department.routes"));
 const attendance_routes_1 = __importDefault(require("./modules/Attendance/attendance.routes"));
@@ -16,16 +16,11 @@ const notifacation_routes_1 = __importDefault(require("./modules/Notification/no
 const app = (0, express_1.default)();
 app.set("trust proxy", 1);
 app.get("/api/health", (req, res) => {
-    try {
-        const dbReady = true;
-        res.status(200).json({
-            status: "OK",
-            db: dbReady
-        });
-    }
-    catch {
-        res.status(500).json({ status: "ERROR" });
-    }
+    const dbReady = mongoose_1.default.connection.readyState === 1;
+    res.status(dbReady ? 200 : 500).json({
+        status: dbReady ? "OK" : "ERROR",
+        db: dbReady,
+    });
 });
 app.use((0, cors_1.default)({
     origin: (origin, callback) => {
@@ -59,9 +54,8 @@ app.get("/api/ping", (req, res) => {
 });
 app.use("/api/auth", user_Routes_1.default);
 app.use("/api/event", event_routes_1.default);
-//app.use("/api/face", faceRoutes);
 app.use("/api/location", location_routes_1.default);
-app.use("/api/department", department_routes_1.default);
+app.use("/api/course", department_routes_1.default);
 app.use("/api/attendance", attendance_routes_1.default);
 app.use("/api/notifications", notifacation_routes_1.default);
 exports.default = app;

@@ -44,11 +44,6 @@ const NotificationSchema = new mongoose_1.Schema({
         type: String,
         required: true,
     },
-    targetDepartment: {
-        type: String,
-        required: true,
-        default: "All Deparment"
-    },
     sender: {
         type: mongoose_1.Schema.Types.ObjectId,
         ref: "User",
@@ -56,6 +51,10 @@ const NotificationSchema = new mongoose_1.Schema({
     data: {
         screen: String,
         eventId: String,
+    },
+    eventId: {
+        type: mongoose_1.Schema.Types.ObjectId,
+        ref: "Event",
     },
     sentAt: {
         type: Date,

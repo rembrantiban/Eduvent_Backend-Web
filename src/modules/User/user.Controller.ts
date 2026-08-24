@@ -1112,7 +1112,7 @@ export const getUsersSameCourse = async (
 
     const users = await User.find({
       course: req.user.course,
-      role: { $ne: "teacher" },
+      role: { $ne: "CSSG_Adviser" },
     }).select("-password");
 
     return res.json(

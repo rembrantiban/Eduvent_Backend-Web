@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updateUserRole = exports.updatePassword = exports.updateUserFullname = exports.savePushToken = exports.deleteUserAccount = exports.getTotalUsers = exports.DeactivateUserAccount = exports.getAllUsers = exports.getUsersSameDepartment = exports.checkUserAuth = exports.logoutUser = exports.resetPassword = exports.verifyResetCode = exports.requestResetCode = exports.updateUserProfileForStudent = exports.completeProfile = exports.loginUser = exports.loginAdmin = exports.updateUser = exports.createUserByAdmin = exports.createUserByTeacher = exports.signupUser = void 0;
+exports.changeStudentPassword = exports.updateUserRole = exports.updatePassword = exports.updateUserFullname = exports.savePushToken = exports.deleteUserAccount = exports.getTotalUsers = exports.DeactivateUserAccount = exports.getAllUsers = exports.getUsersSameCourse = exports.checkUserAuth = exports.logoutUser = exports.resendResetCode = exports.resetPassword = exports.verifyResetCode = exports.requestResetCode = exports.updateUserProfileForStudent = exports.completeProfile = exports.loginUser = exports.getCurrentUser = exports.loginAdmin = exports.updateUser = exports.createUserByAdmin = exports.createUserByTeacher = exports.signupUser = void 0;
 const user_Model_1 = require("./user.Model");
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
@@ -12,10 +12,12 @@ const crypto_1 = __importDefault(require("crypto"));
 const resend_1 = require("../../common/lib/resend");
 const cloudinary_1 = __importDefault(require("../../config/cloudinary"));
 const roles_1 = __importDefault(require("../../common/utils/roles"));
+const EmailTemplate_services_1 = require("../../services/EmailTemplate.services");
+const department_Model_1 = require("../Department/department.Model");
 const SALT_ROUNDS = 12;
 const signupUser = async (req, res) => {
     try {
-        const { firstName, lastName, email, password, role, studentId, yearLevel, major, department, section } = req.body;
+        const { firstName, lastName, email, password, role, studentId, yearLevel, major, course, section } = req.body;
         if (!firstName || !lastName || !email || !password || !role) {
             return res.status(400).json({ message: "Please provide all required fields." });
         }
@@ -34,7 +36,7 @@ const signupUser = async (req, res) => {
             }
         }
         if (role === "CSSG_officer") {
-            if (!studentId || !yearLevel || !department || !section) {
+            if (!studentId || !yearLevel || !course || !section) {
                 return res.status(400).json({
                     message: "All student fields are required for this role."
                 });
@@ -66,7 +68,7 @@ const signupUser = async (req, res) => {
             newUser.studentId = studentId;
             newUser.yearLevel = yearLevel;
             newUser.major = major;
-            newUser.department = department;
+            newUser.course = course;
             newUser.section = section;
         }
         const createdUser = await user_Model_1.User.create(newUser);
@@ -81,7 +83,7 @@ const signupUser = async (req, res) => {
                 role: createdUser.role,
                 studentId: createdUser.studentId,
                 yearLevel: createdUser.yearLevel,
-                department: createdUser.department,
+                course: createdUser.course,
                 major: createdUser.major,
                 section: createdUser.section,
             },
@@ -135,7 +137,7 @@ const createUserByTeacher = async (req, res) => {
         if (!req.user || req.user.role !== "CSSG_Adviser") {
             return res.status(403).json({ message: "Forbidden" });
         }
-        const department = req.user.department;
+        const course = req.user.course;
         // Default password
         const hashedPassword = await bcrypt_1.default.hash(password, 12);
         const newUser = await user_Model_1.User.create({
@@ -144,7 +146,7 @@ const createUserByTeacher = async (req, res) => {
             email,
             password: hashedPassword,
             role,
-            department,
+            course,
             ...(role === "student" && {
                 studentId,
                 yearLevel,
@@ -160,7 +162,7 @@ const createUserByTeacher = async (req, res) => {
                 lastName: newUser.lastName,
                 email: newUser.email,
                 role: newUser.role,
-                department: newUser.department,
+                course: newUser.course,
                 major: newUser.major,
             },
         });
@@ -181,7 +183,7 @@ const createUserByAdmin = async (req, res) => {
                 message: "Only admins can create users.",
             });
         }
-        const { firstName, lastName, email, password, role, department, studentId, yearLevel, section, major, } = req.body;
+        const { firstName, lastName, email, password, role, course, studentId, yearLevel, section, major, } = req.body;
         // ✅ Allowed roles
         if (!["CSSG_Adviser", "student", "CSSG_officer", "Saso"].includes(role)) {
             return res.status(403).json({
@@ -189,7 +191,7 @@ const createUserByAdmin = async (req, res) => {
             });
         }
         // ✅ Required fields
-        if (!firstName || !lastName || !email || !password || !role || !department) {
+        if (!firstName || !lastName || !email || !password || !role || !course) {
             return res.status(400).json({
                 message: "Missing required fields.",
             });
@@ -230,7 +232,7 @@ const createUserByAdmin = async (req, res) => {
             email,
             password: hashedPassword,
             role,
-            department,
+            course,
             ...(role === "student" || role === "CSSG_officer") && {
                 major,
                 studentId,
@@ -246,7 +248,7 @@ const createUserByAdmin = async (req, res) => {
                 lastName: newUser.lastName,
                 email: newUser.email,
                 role: newUser.role,
-                department: newUser.department,
+                course: newUser.course,
                 major: newUser.major,
             },
         });
@@ -268,7 +270,7 @@ const updateUser = async (req, res) => {
             });
         }
         const { id } = req.params;
-        const { firstName, lastName, email, role, department, studentId, yearLevel, section, password, } = req.body;
+        const { firstName, lastName, email, role, course, major, studentId, yearLevel, section, password, } = req.body;
         const userToUpdate = await user_Model_1.User.findById(id);
         if (!userToUpdate) {
             return res.status(404).json({
@@ -282,9 +284,9 @@ const updateUser = async (req, res) => {
                     message: "CSSG_Adviser cannot update this user.",
                 });
             }
-            if (userToUpdate.department !== currentUser.department) {
+            if (userToUpdate.course !== currentUser.course) {
                 return res.status(403).json({
-                    message: "You can only update users in your department.",
+                    message: "You can only update users in your course.",
                 });
             }
         }
@@ -327,12 +329,13 @@ const updateUser = async (req, res) => {
             lastName: lastName?.trim(),
             email,
             role,
-            department,
+            course,
         };
         if (isStudentRole) {
             updateData.studentId = studentId;
             updateData.yearLevel = yearLevel;
             updateData.section = section;
+            updateData.major = major;
         }
         if (password) {
             if (password.length < 6) {
@@ -406,7 +409,7 @@ const loginAdmin = async (req, res) => {
                 lastName: user.lastName,
                 email: user.email,
                 role: user.role,
-                department: user.department,
+                course: user.course,
                 avatar: user.avatar,
                 isFaceRegistered: user.isFaceRegistered
             },
@@ -418,6 +421,52 @@ const loginAdmin = async (req, res) => {
     }
 };
 exports.loginAdmin = loginAdmin;
+const getCurrentUser = async (req, res) => {
+    try {
+        if (!req.user) {
+            return res.status(401).json({
+                success: false,
+                message: "Unauthorized",
+            });
+        }
+        const user = await user_Model_1.User.findById(req.user._id)
+            .select("-password");
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found.",
+            });
+        }
+        return res.status(200).json({
+            success: true,
+            user: {
+                id: user._id,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                email: user.email,
+                role: user.role,
+                avatar: user.avatar,
+                studentId: user.studentId,
+                course: user.course,
+                major: user.major,
+                yearLevel: user.yearLevel,
+                section: user.section,
+                isFaceRegistered: user.isFaceRegistered,
+                isActive: user.isActive,
+                createdAt: user.createdAt,
+                updatedAt: user.updatedAt,
+            },
+        });
+    }
+    catch (error) {
+        console.error("Get current user error:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error.",
+        });
+    }
+};
+exports.getCurrentUser = getCurrentUser;
 const loginUser = async (req, res) => {
     try {
         const { identifier, password } = req.body;
@@ -433,6 +482,11 @@ const loginUser = async (req, res) => {
                 { studentId: normalizedIdentifier },
             ],
         }).select("+password");
+        if (user && user.isActive === false) {
+            return res.status(401).json({
+                message: "Your account is deactivated. Please contact admin.",
+            });
+        }
         if (!user) {
             return res.status(401).json({
                 message: "Invalid credentials.",
@@ -444,14 +498,23 @@ const loginUser = async (req, res) => {
                 message: "Invalid credentials.",
             });
         }
-        const isProfileComplete = user.role !== "student" && user.role !== "CSSG_officer" ||
-            (user.yearLevel && user.department && user.section && user.major);
+        let isProfileComplete = true;
+        if (user.role === "student" || user.role === "CSSG_officer") {
+            const selectedCourse = await department_Model_1.Course.findOne({
+                name: user.course,
+            });
+            const hasMajors = (selectedCourse?.majors?.length ?? 0) > 0;
+            isProfileComplete = Boolean(user.yearLevel &&
+                user.course &&
+                user.section &&
+                (!hasMajors || user.major));
+        }
         const token = jsonwebtoken_1.default.sign({
             id: user._id,
             role: user.role,
             email: user.email,
             studentId: user.studentId,
-            department: user.department,
+            course: user.course,
             section: user.section,
             yearLevel: user.yearLevel,
             major: user.major,
@@ -468,7 +531,7 @@ const loginUser = async (req, res) => {
                 role: user.role,
                 studentId: user.studentId,
                 yearLevel: user.yearLevel,
-                department: user.department,
+                course: user.course,
                 major: user.major,
                 section: user.section,
                 profileCompleted: isProfileComplete,
@@ -489,37 +552,62 @@ exports.loginUser = loginUser;
 const completeProfile = async (req, res) => {
     try {
         if (!req.user) {
-            return res.status(401).json({ message: "Unauthorized" });
+            return res.status(401).json({
+                message: "Unauthorized",
+            });
         }
-        const { yearLevel, department, section, major } = req.body;
+        const { yearLevel, course, section, major } = req.body;
         const userId = req.user._id;
-        if (!yearLevel || !department || !section || !major) {
+        if (!yearLevel || !course || !section) {
             return res.status(400).json({
-                message: "Please provide all required fields.",
+                message: "Year level, course, and section are required.",
+            });
+        }
+        const selectedCourse = await department_Model_1.Course.findOne({
+            name: course.trim(),
+        });
+        if (!selectedCourse) {
+            return res.status(404).json({
+                message: "Course not found.",
+            });
+        }
+        const hasMajors = (selectedCourse.majors?.length ?? 0) > 0;
+        if (hasMajors && !major?.trim()) {
+            return res.status(400).json({
+                message: "Please select a major for this course.",
             });
         }
         const updatedUser = await user_Model_1.User.findByIdAndUpdate(userId, {
             yearLevel: yearLevel.trim(),
-            department: department.trim(),
+            course: course.trim(),
             section: section.trim(),
-            major: major.trim(),
-        }, { new: true });
+            major: hasMajors ? major.trim() : "",
+        }, {
+            new: true,
+        });
+        if (!updatedUser) {
+            return res.status(404).json({
+                message: "User not found.",
+            });
+        }
         return res.status(200).json({
             message: "Profile completed successfully",
             user: updatedUser,
         });
     }
     catch (err) {
-        console.error(err);
-        res.status(500).json({ message: "Internal server error" });
+        console.error("Complete profile error:", err);
+        return res.status(500).json({
+            message: "Internal server error",
+        });
     }
 };
 exports.completeProfile = completeProfile;
 const updateUserProfileForStudent = async (req, res) => {
     try {
         const userId = req.user?._id;
-        const { firstName, lastName, yearLevel, department, section, major } = req.body;
-        if (!firstName || !lastName || !yearLevel || !department || !section || !major) {
+        const { firstName, lastName, yearLevel, course, section, major } = req.body;
+        if (!firstName || !lastName || !yearLevel || !course || !section) {
             return res.status(400).json({
                 message: "All fields are required",
             });
@@ -550,7 +638,7 @@ const updateUserProfileForStudent = async (req, res) => {
             firstName: firstName.trim(),
             lastName: lastName.trim(),
             yearLevel: yearLevel.trim(),
-            department: department.trim(),
+            course: course.trim(),
             major: major.trim(),
             section: section.trim()
         };
@@ -581,29 +669,42 @@ exports.updateUserProfileForStudent = updateUserProfileForStudent;
 const requestResetCode = async (req, res) => {
     try {
         const { email } = req.body;
+        console.log("EMAIL:", email);
         const user = await user_Model_1.User.findOne({ email });
         if (!user) {
-            return res.status(404).json({ message: "User not found" });
+            return res.status(404).json({
+                message: "User not found",
+            });
         }
-        // 6-digit code
-        const code = crypto_1.default.randomInt(100000, 999999).toString();
+        const code = crypto_1.default
+            .randomInt(100000, 999999)
+            .toString();
         user.resetPasswordCode = crypto_1.default
             .createHash("sha256")
             .update(code)
             .digest("hex");
-        user.resetPasswordExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 mins
+        user.resetPasswordExpires = new Date(Date.now() + 10 * 60 * 1000);
         user.resetPasswordVerified = false;
         await user.save();
-        await resend_1.resend.emails.send({
-            from: "no-reply@yourdomain.com",
+        const resendResponse = await resend_1.resend.emails.send({
+            from: "EduVent <no-reply@eduvent.site>",
             to: email,
             subject: "Password Reset Code",
-            text: `Your password reset code is: ${code}\nExpires in 10 minutes.`,
+            html: (0, EmailTemplate_services_1.emailTemplate)(Number(code), user.firstName),
         });
-        res.json({ message: "Reset code sent to email" });
+        console.log("RESEND RESPONSE:", resendResponse);
+        return res.json({
+            success: true,
+            message: "Reset code sent to email",
+        });
     }
     catch (err) {
-        res.status(500).json({ message: "Server error" });
+        console.log("RESEND ERROR:", err);
+        return res.status(500).json({
+            success: false,
+            message: "Server error",
+            error: err.message,
+        });
     }
 };
 exports.requestResetCode = requestResetCode;
@@ -644,9 +745,9 @@ const resetPassword = async (req, res) => {
         }
         user.password = await bcrypt_1.default.hash(newPassword, 12);
         // Cleanup
-        user.resetPasswordCode = undefined;
-        user.resetPasswordExpires = undefined;
-        user.resetPasswordVerified = undefined;
+        // user.resetPasswordCode = undefined;
+        //  user.resetPasswordExpires = undefined;
+        // user.resetPasswordVerified = undefined;
         await user.save();
         res.json({ message: "Password reset successful" });
     }
@@ -655,6 +756,62 @@ const resetPassword = async (req, res) => {
     }
 };
 exports.resetPassword = resetPassword;
+const resendResetCode = async (req, res) => {
+    try {
+        const { email } = req.body;
+        if (!email) {
+            return res.status(400).json({
+                success: false,
+                message: "Email is required",
+            });
+        }
+        const user = await user_Model_1.User.findOne({
+            email,
+        });
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found",
+            });
+        }
+        // Generate new code
+        const code = crypto_1.default
+            .randomInt(100000, 999999)
+            .toString();
+        // Hash code
+        user.resetPasswordCode =
+            crypto_1.default
+                .createHash("sha256")
+                .update(code)
+                .digest("hex");
+        // Expiration
+        user.resetPasswordExpires =
+            new Date(Date.now() +
+                10 * 60 * 1000);
+        // Reset verification state
+        user.resetPasswordVerified =
+            false;
+        await user.save();
+        await resend_1.resend.emails.send({
+            from: "EduVent <no-reply@eduvent.site>",
+            to: email,
+            subject: "Your New Reset Code",
+            html: (0, EmailTemplate_services_1.emailTemplate)(Number(code), user.firstName),
+        });
+        return res.status(200).json({
+            success: true,
+            message: "New reset code sent",
+        });
+    }
+    catch (err) {
+        console.log("RESEND RESET CODE ERROR:", err);
+        return res.status(500).json({
+            success: false,
+            message: "Server error",
+        });
+    }
+};
+exports.resendResetCode = resendResetCode;
 const logoutUser = async (req, res) => {
     try {
         res.clearCookie("user_token", {
@@ -687,7 +844,7 @@ const checkUserAuth = async (req, res) => {
                 studentId: req.user.studentId,
                 yearLevel: req.user.yearLevel,
                 section: req.user.section,
-                department: req.user.department,
+                course: req.user.course,
                 avatar: req.user.avatar,
             },
         });
@@ -698,19 +855,19 @@ const checkUserAuth = async (req, res) => {
     }
 };
 exports.checkUserAuth = checkUserAuth;
-const getUsersSameDepartment = async (req, res) => {
+const getUsersSameCourse = async (req, res) => {
     try {
         if (!req.user) {
             return res.status(401).json({ message: "Unauthorized" });
         }
-        if (!req.user.department) {
+        if (!req.user.course) {
             return res
                 .status(400)
-                .json({ message: "User has no department assigned" });
+                .json({ message: "User has no course assigned" });
         }
         const users = await user_Model_1.User.find({
-            department: req.user.department,
-            role: { $ne: "teacher" },
+            course: req.user.course,
+            role: { $ne: "CSSG_Adviser" },
         }).select("-password");
         return res.json(users.map((user) => ({
             id: user._id.toString(),
@@ -719,7 +876,7 @@ const getUsersSameDepartment = async (req, res) => {
             email: user.email,
             role: user.role,
             section: user.section,
-            department: user.department,
+            course: user.course,
             studentId: user.studentId,
             yearLevel: user.yearLevel,
             dateAdded: user.createdAt
@@ -735,7 +892,7 @@ const getUsersSameDepartment = async (req, res) => {
         return res.status(500).json({ message: "Server error" });
     }
 };
-exports.getUsersSameDepartment = getUsersSameDepartment;
+exports.getUsersSameCourse = getUsersSameCourse;
 const getAllUsers = async (req, res) => {
     try {
         const currentUserRole = req.user?.role;
@@ -763,11 +920,12 @@ const getAllUsers = async (req, res) => {
             email: user.email,
             role: user.role,
             section: user.section,
-            department: user.department,
+            course: user.course,
             major: user.major,
             studentId: user.studentId,
             yearLevel: user.yearLevel,
             avatar: user.avatar,
+            isFaceRegistered: user.isFaceRegistered,
             isActive: user.isActive,
             dateAdded: user.createdAt
                 ? new Intl.DateTimeFormat("en-US", {
@@ -980,4 +1138,52 @@ const updateUserRole = async (req, res) => {
     }
 };
 exports.updateUserRole = updateUserRole;
+const changeStudentPassword = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const { currentPassword, newPassword, confirmPassword, } = req.body;
+        // VALIDATE
+        if (!currentPassword ||
+            !newPassword ||
+            !confirmPassword) {
+            return res.status(400).json({
+                message: "All fields are required",
+            });
+        }
+        // PASSWORD MATCH
+        if (newPassword !==
+            confirmPassword) {
+            return res.status(400).json({
+                message: "Passwords do not match",
+            });
+        }
+        const user = await user_Model_1.User.findById(userId);
+        if (!user) {
+            return res.status(404).json({
+                message: "User not found",
+            });
+        }
+        const isMatch = await bcrypt_1.default.compare(currentPassword, user.password);
+        if (!isMatch) {
+            return res.status(400).json({
+                message: "Current password is incorrect",
+            });
+        }
+        const hashedPassword = await bcrypt_1.default.hash(newPassword, 12);
+        user.password =
+            hashedPassword;
+        await user.save();
+        res.status(200).json({
+            success: true,
+            message: "Password updated successfully",
+        });
+    }
+    catch (error) {
+        console.log("CHANGE PASSWORD ERROR:", error);
+        res.status(500).json({
+            message: "Server error",
+        });
+    }
+};
+exports.changeStudentPassword = changeStudentPassword;
 //# sourceMappingURL=user.Controller.js.map

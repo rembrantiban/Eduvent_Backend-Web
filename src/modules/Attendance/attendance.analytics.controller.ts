@@ -10,7 +10,7 @@ export const getAttendanceAnalytics = async (
     res: Response
 ) => {
     try {
-        const { eventId } = req.params;
+        const eventId = String(req.params.eventId);
 
         if (!mongoose.Types.ObjectId.isValid(eventId)) {
             return res.status(400).json({
