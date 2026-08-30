@@ -14,7 +14,7 @@ const SALT_ROUNDS = 12;
 
 export const signupUser = async (req: Request, res: Response) => {
   try {
-    const { firstName, lastName, email, password, role, studentId, yearLevel, major, course, section } = req.body;
+    const { firstName, lastName, email, password, role, studentId, yearLevel, major, course, section, gender } = req.body;
 
     if (!firstName || !lastName || !email || !password || !role) {
       return res.status(400).json({ message: "Please provide all required fields." });
@@ -23,6 +23,9 @@ export const signupUser = async (req: Request, res: Response) => {
     if (role === "student") {
       if (!studentId || !firstName || !lastName || !password || !email) {
         return res.status(400).json({ message: "Student ID, first name, last name, and password are required for students." });
+      }
+      if (!gender || !["Male", "Female"].includes(gender)) {
+        return res.status(400).json({ message: "Gender is required for students." });
       }
     }
     // Check if email exists
@@ -57,6 +60,7 @@ export const signupUser = async (req: Request, res: Response) => {
       newUser.major = major;
       newUser.course = course;
       newUser.section = section;
+      newUser.gender = gender;
     }
 
     const createdUser = await User.create(newUser);
@@ -80,6 +84,7 @@ export const signupUser = async (req: Request, res: Response) => {
         course: createdUser.course,
         major: createdUser.major,
         section: createdUser.section,
+        gender: createdUser.gender,
       },
       token,
     });
@@ -111,6 +116,7 @@ export const createUserByTeacher = async (
       major,
       yearLevel,
       section,
+      gender,
     } = req.body;
 
     if (!["student", "CSSG_officer", "Saso"].includes(role)) {
@@ -122,6 +128,12 @@ export const createUserByTeacher = async (
     if (!firstName || !lastName || !email || !role || !password) {
       return res.status(400).json({
         message: "Missing required fields.",
+      });
+    }
+
+    if (role === "student" && (!gender || !["Male", "Female"].includes(gender))) {
+      return res.status(400).json({
+        message: "Gender is required for students.",
       });
     }
 
@@ -170,6 +182,7 @@ export const createUserByTeacher = async (
         yearLevel,
         section,
         major,
+        gender,
       }),
     });
 
@@ -217,6 +230,7 @@ export const createUserByAdmin = async (
       yearLevel,
       section,
       major,
+      gender,
     } = req.body;
 
     // ✅ Allowed roles
@@ -257,6 +271,12 @@ export const createUserByAdmin = async (
         });
       }
 
+      if (!gender || !["Male", "Female"].includes(gender)) {
+        return res.status(400).json({
+          message: "Gender is required for students.",
+        });
+      }
+
       const existingStudent = await User.findOne({ studentId });
       if (existingStudent) {
         return res.status(400).json({
@@ -280,6 +300,7 @@ export const createUserByAdmin = async (
         studentId,
         yearLevel,
         section,
+        gender,
       },
     });
 
@@ -327,6 +348,7 @@ export const updateUser = async (req: Request, res: Response) => {
       studentId,
       yearLevel,
       section,
+      gender,
       password,
     } = req.body;
 
@@ -382,6 +404,12 @@ export const updateUser = async (req: Request, res: Response) => {
         });
       }
 
+      if (!gender || !["Male", "Female"].includes(gender)) {
+        return res.status(400).json({
+          message: "Gender is required for students.",
+        });
+      }
+
       const existingStudent = await User.findOne({
         studentId,
         _id: { $ne: id },
@@ -407,6 +435,7 @@ export const updateUser = async (req: Request, res: Response) => {
       updateData.yearLevel = yearLevel;
       updateData.section = section;
       updateData.major = major;
+      updateData.gender = gender;
     }
 
 
@@ -553,6 +582,7 @@ export const getCurrentUser = async (
         major: user.major,
         yearLevel: user.yearLevel,
         section: user.section,
+        gender: user.gender,
         isFaceRegistered: user.isFaceRegistered,
         isActive: user.isActive,
         createdAt: user.createdAt,
@@ -622,6 +652,7 @@ export const loginUser = async (req: Request, res: Response) => {
         user.yearLevel &&
         user.course &&
         user.section &&
+        user.gender &&
         (!hasMajors || user.major)
       );
     }
@@ -656,6 +687,7 @@ export const loginUser = async (req: Request, res: Response) => {
         course: user.course,
         major: user.major,
         section: user.section,
+        gender: user.gender,
         profileCompleted: isProfileComplete,
         avatar: user.avatar,
         isFaceRegistered: user.isFaceRegistered
@@ -680,12 +712,18 @@ export const completeProfile = async (req: Request, res: Response) => {
       });
     }
 
-    const { yearLevel, course, section, major } = req.body;
+    const { yearLevel, course, section, major, gender } = req.body;
     const userId = req.user._id;
 
     if (!yearLevel || !course || !section) {
       return res.status(400).json({
         message: "Year level, course, and section are required.",
+      });
+    }
+
+    if (!gender || !["Male", "Female"].includes(gender)) {
+      return res.status(400).json({
+        message: "Gender is required.",
       });
     }
 
@@ -714,6 +752,7 @@ export const completeProfile = async (req: Request, res: Response) => {
         yearLevel: yearLevel.trim(),
         course: course.trim(),
         section: section.trim(),
+        gender,
 
         major: hasMajors ? major.trim() : "",
       },
@@ -745,11 +784,17 @@ export const completeProfile = async (req: Request, res: Response) => {
 export const updateUserProfileForStudent = async (req: Request, res: Response) => {
   try {
     const userId = req.user?._id;
-    const { firstName, lastName, yearLevel, course, section, major } = req.body;
+    const { firstName, lastName, yearLevel, course, section, major, gender } = req.body;
 
     if (!firstName || !lastName || !yearLevel || !course || !section) {
       return res.status(400).json({
         message: "All fields are required",
+      });
+    }
+
+    if (!gender || !["Male", "Female"].includes(gender)) {
+      return res.status(400).json({
+        message: "Gender is required",
       });
     }
 
@@ -786,7 +831,8 @@ export const updateUserProfileForStudent = async (req: Request, res: Response) =
       yearLevel: yearLevel.trim(),
       course: course.trim(),
       major: major.trim(),
-      section: section.trim()
+      section: section.trim(),
+      gender
     };
 
     // ✅ only add avatar if uploaded
@@ -1066,6 +1112,7 @@ export const checkUserAuth = async (req: Request, res: Response) => {
         yearLevel: req.user.yearLevel,
         section: req.user.section,
         course: req.user.course,
+        gender: req.user.gender,
         avatar: req.user.avatar,
       },
     });
@@ -1108,6 +1155,7 @@ export const getUsersSameCourse = async (
         course: user.course,
         studentId: user.studentId,
         yearLevel: user.yearLevel,
+        gender: user.gender,
 
         dateAdded: user.createdAt
           ? new Date(user.createdAt).toLocaleDateString()
@@ -1161,6 +1209,7 @@ export const getAllUsers = async (req: Request, res: Response) => {
         major: user.major,
         studentId: user.studentId,
         yearLevel: user.yearLevel,
+        gender: user.gender,
         avatar: user.avatar,
         isFaceRegistered: user.isFaceRegistered,
         isActive: user.isActive,

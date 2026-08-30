@@ -22,6 +22,7 @@ export interface IUser extends Document {
   course?: string;
   major: string;
   section?: string;
+  gender?: "Male" | "Female";
   createdAt: Date;
   updatedAt: Date;
   resetPasswordCode?: string;
@@ -60,6 +61,7 @@ const UserSchema: Schema = new Schema<IUser>(
     course: { type: String },
     major: { type: String },
     section: { type: String },
+    gender: { type: String, enum: ["Male", "Female"] },
   },
   { timestamps: true }
 );
