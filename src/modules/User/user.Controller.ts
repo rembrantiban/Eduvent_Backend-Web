@@ -9,6 +9,7 @@ import cloudinary from "../../config/cloudinary"
 import canAssignRole from "../../common/utils/roles"
 import { emailTemplate } from "../../services/EmailTemplate.services";
 import { Course } from "../Department/department.Model"
+import { FaceUser } from "../Face/face.model"
 
 const SALT_ROUNDS = 12;
 
@@ -1197,6 +1198,15 @@ export const getAllUsers = async (req: Request, res: Response) => {
 
     const users = await User.find(roleFilter).select("-password");
 
+    // Attach the facial-recognition photo (faceUrl) for each user
+    const userIds = users.map((user) => user._id.toString());
+    const faces = await FaceUser.find({ userId: { $in: userIds } }).select(
+      "userId faceUrl"
+    );
+    const faceUrlByUserId = new Map(
+      faces.map((face) => [face.userId, face.faceUrl])
+    );
+
     return res.json(
       users.map((user) => ({
         id: user._id.toString(),
@@ -1211,6 +1221,7 @@ export const getAllUsers = async (req: Request, res: Response) => {
         yearLevel: user.yearLevel,
         gender: user.gender,
         avatar: user.avatar,
+        faceUrl: faceUrlByUserId.get(user._id.toString()) ?? null,
         isFaceRegistered: user.isFaceRegistered,
         isActive: user.isActive,
         dateAdded: user.createdAt
@@ -1230,6 +1241,58 @@ export const getAllUsers = async (req: Request, res: Response) => {
           : "NA",
       }))
     );
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+
+export const getUserById = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const user = await User.findById(id).select("-password");
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const face = await FaceUser.findOne({
+      userId: user._id.toString(),
+    }).select("faceUrl");
+
+    return res.json({
+      id: user._id.toString(),
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      role: user.role,
+      section: user.section,
+      course: user.course,
+      major: user.major,
+      studentId: user.studentId,
+      yearLevel: user.yearLevel,
+      gender: user.gender,
+      avatar: user.avatar,
+      faceUrl: face?.faceUrl ?? null,
+      isFaceRegistered: user.isFaceRegistered,
+      isActive: user.isActive,
+      dateAdded: user.createdAt
+        ? new Intl.DateTimeFormat("en-US", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        }).format(new Date(user.createdAt))
+        : "NA",
+      lastActive: user.updatedAt
+        ? new Intl.DateTimeFormat("en-US", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        }).format(new Date(user.updatedAt))
+        : "NA",
+    });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: "Server error" });

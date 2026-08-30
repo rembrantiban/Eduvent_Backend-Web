@@ -14,6 +14,7 @@ import {
          getUsersSameCourse,
          createUserByTeacher,
          getAllUsers,
+         getUserById,
          createUserByAdmin,
          getTotalUsers,
          deleteUserAccount,
@@ -47,6 +48,7 @@ router.post("/create-user-by-teacher", requireAuth, createUserByTeacher);
 router.post("/create-user-by-admin", requireAuth, createUserByAdmin);
 router.get("/get-all-users", requireAuth, getAllUsers);
 router.get("/get-users-same-course", requireAuth, getUsersSameCourse);
+router.get("/get-user/:id", requireAuth, getUserById);
 router.get("/get-total-users", getTotalUsers);
 router.delete("/delete-user/:id", requireAuth, deleteUserAccount);
 router.post("/save-push-token", MobileAuth, savePushToken);
