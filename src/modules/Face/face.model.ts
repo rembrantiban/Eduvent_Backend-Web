@@ -9,6 +9,7 @@ export interface IFaceUser
   name: string;
   faceUrl: string;
   cloudinaryId: string;
+  faceToken: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -36,6 +37,11 @@ const FaceUserSchema =
       cloudinaryId: {
         type: String,
         required: true,
+      },
+
+      faceToken: {
+        type: String,
+        index: true,
       },
     },
     {

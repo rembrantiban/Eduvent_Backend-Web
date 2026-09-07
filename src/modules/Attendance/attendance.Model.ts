@@ -23,8 +23,30 @@ export interface IAttendance
 
   timeOut?: Date;
 
+  timeInLocation?: {
+    latitude: number;
+    longitude: number;
+  };
+
+  timeOutLocation?: {
+    latitude: number;
+    longitude: number;
+  };
+
+  timeInDistance?: number;
+
+  timeOutDistance?: number;
+
   imageUrl?: string;
 }
+
+const CoordinateSchema = new Schema(
+  {
+    latitude: { type: Number },
+    longitude: { type: Number },
+  },
+  { _id: false }
+);
 
 const AttendanceSchema =
   new Schema<IAttendance>(
@@ -69,6 +91,24 @@ const AttendanceSchema =
       timeOut: {
         type: Date,
         default: null,
+      },
+
+      timeInLocation: {
+        type: CoordinateSchema,
+        default: undefined,
+      },
+
+      timeOutLocation: {
+        type: CoordinateSchema,
+        default: undefined,
+      },
+
+      timeInDistance: {
+        type: Number,
+      },
+
+      timeOutDistance: {
+        type: Number,
       },
 
       imageUrl: {

@@ -413,6 +413,13 @@ export class AttendanceController {
 
             timeIn: now,
 
+            timeInLocation: {
+              latitude: lat,
+              longitude: lng,
+            },
+
+            timeInDistance: distance,
+
             imageUrl
 
           });
@@ -466,6 +473,14 @@ export class AttendanceController {
 
       existingAttendance.confidence =
         confidence;
+
+      existingAttendance.timeOutLocation = {
+        latitude: lat,
+        longitude: lng,
+      };
+
+      existingAttendance.timeOutDistance =
+        distance;
 
       existingAttendance.imageUrl =
         imageUrl;

@@ -768,8 +768,28 @@ export const completeProfile = async (req: Request, res: Response) => {
       });
     }
 
+    // Re-issue the token so it carries the freshly completed profile claims
+    const token = jwt.sign(
+      {
+        id: updatedUser._id,
+        role: updatedUser.role,
+        email: updatedUser.email,
+        studentId: updatedUser.studentId,
+        course: updatedUser.course,
+        section: updatedUser.section,
+        yearLevel: updatedUser.yearLevel,
+        major: updatedUser.major,
+        gender: updatedUser.gender,
+        isFaceRegistered: updatedUser.isFaceRegistered,
+        avatar: updatedUser.avatar,
+      },
+      process.env.JWT_SECRET || "defaultsecret",
+      { expiresIn: "7d" }
+    );
+
     return res.status(200).json({
       message: "Profile completed successfully",
+      token,
       user: updatedUser,
     });
 

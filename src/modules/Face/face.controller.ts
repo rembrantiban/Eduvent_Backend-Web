@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { FaceService } from "./face.service";
 import { FaceUser } from "./face.model";
 import { User } from "../User/user.Model"
+import cloudinary from "../../config/cloudinary"
 
 const delay = (ms: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, ms));
@@ -80,10 +81,29 @@ export class FaceController {
     // 4️⃣ Add face to FaceSet
     await FaceService.addFace(faceToken);
 
-    // 5️⃣ Save to database
+    // 5️⃣ Upload the registered photo to Cloudinary
+    const uploadResult = await new Promise<any>((resolve, reject) => {
+      cloudinary.uploader
+        .upload_stream(
+          {
+            folder: "faces",
+            resource_type: "image",
+          },
+          (error, result) => {
+            if (error) reject(error);
+            else resolve(result);
+          }
+        )
+        .end(req.file!.buffer);
+    });
+
+    // 6️⃣ Save to database
     const faceUser = await FaceUser.create({
       userId,
       name,
+      faceUrl: uploadResult.secure_url,
+      cloudinaryId: uploadResult.public_id,
+      faceToken,
     });
 
     await User.findByIdAndUpdate(userId, {
