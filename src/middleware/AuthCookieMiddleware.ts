@@ -43,8 +43,19 @@ export const MobileAuth = async (
     next();
 
   } catch (error) {
-    console.error("JWT ERROR:", error);
-    return res.status(401).json({ message: "Invalid token" });
+    // Only a genuinely bad/expired token is an auth failure (401). Anything
+    // else here (e.g. a transient DB error on User.findById) must NOT sign the
+    // user out — the mobile client treats 401 as "session expired".
+    if (
+      error instanceof jwt.JsonWebTokenError ||
+      error instanceof jwt.TokenExpiredError
+    ) {
+      console.error("JWT ERROR:", error);
+      return res.status(401).json({ message: "Invalid token" });
+    }
+
+    console.error("AUTH MIDDLEWARE ERROR:", error);
+    return res.status(500).json({ message: "Authentication check failed" });
   }
 };
 

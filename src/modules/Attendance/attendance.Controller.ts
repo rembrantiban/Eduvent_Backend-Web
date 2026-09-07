@@ -105,7 +105,7 @@ export class AttendanceController {
           error?.response?.data
         );
 
-        return res.status(401).json({
+        return res.status(422).json({
           success: false,
           message:
             error?.response?.data?.message ||
@@ -116,7 +116,7 @@ export class AttendanceController {
 
       if (!recognizeData?.success) {
 
-        return res.status(401).json({
+        return res.status(422).json({
           success: false,
           message:
             recognizeData?.message ||
@@ -149,7 +149,7 @@ export class AttendanceController {
 
       if (!recognizedStudentId) {
 
-        return res.status(401).json({
+        return res.status(422).json({
           success: false,
           message:
             "Invalid recognized student"
@@ -160,7 +160,7 @@ export class AttendanceController {
       // LOWER = BETTER
       if (confidence > 110) {
 
-        return res.status(401).json({
+        return res.status(422).json({
           success: false,
           message:
             "Face confidence too low"
