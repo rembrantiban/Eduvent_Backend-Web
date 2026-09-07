@@ -54,6 +54,10 @@ const FaceUserSchema = new mongoose_1.Schema({
         type: String,
         required: true,
     },
+    faceToken: {
+        type: String,
+        index: true,
+    },
 }, {
     timestamps: true,
 });

@@ -1,9 +1,13 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.FaceController = void 0;
 const face_service_1 = require("./face.service");
 const face_model_1 = require("./face.model");
 const user_Model_1 = require("../User/user.Model");
+const cloudinary_1 = __importDefault(require("../../config/cloudinary"));
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 class FaceController {
     static async register(req, res) {
@@ -56,10 +60,27 @@ class FaceController {
             await delay(800);
             // 4️⃣ Add face to FaceSet
             await face_service_1.FaceService.addFace(faceToken);
-            // 5️⃣ Save to database
+            // 5️⃣ Upload the registered photo to Cloudinary
+            const uploadResult = await new Promise((resolve, reject) => {
+                cloudinary_1.default.uploader
+                    .upload_stream({
+                    folder: "faces",
+                    resource_type: "image",
+                }, (error, result) => {
+                    if (error)
+                        reject(error);
+                    else
+                        resolve(result);
+                })
+                    .end(req.file.buffer);
+            });
+            // 6️⃣ Save to database
             const faceUser = await face_model_1.FaceUser.create({
                 userId,
                 name,
+                faceUrl: uploadResult.secure_url,
+                cloudinaryId: uploadResult.public_id,
+                faceToken,
             });
             await user_Model_1.User.findByIdAndUpdate(userId, {
                 isFaceRegistered: true

@@ -58,6 +58,7 @@ const UserSchema = new mongoose_1.Schema({
     course: { type: String },
     major: { type: String },
     section: { type: String },
+    gender: { type: String, enum: ["Male", "Female"] },
 }, { timestamps: true });
 exports.User = mongoose_1.default.model("User", UserSchema);
 //# sourceMappingURL=user.Model.js.map

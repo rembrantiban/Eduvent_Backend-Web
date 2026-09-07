@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.changeStudentPassword = exports.updateUserRole = exports.updatePassword = exports.updateUserFullname = exports.savePushToken = exports.deleteUserAccount = exports.getTotalUsers = exports.DeactivateUserAccount = exports.getAllUsers = exports.getUsersSameCourse = exports.checkUserAuth = exports.logoutUser = exports.resendResetCode = exports.resetPassword = exports.verifyResetCode = exports.requestResetCode = exports.updateUserProfileForStudent = exports.completeProfile = exports.loginUser = exports.getCurrentUser = exports.loginAdmin = exports.updateUser = exports.createUserByAdmin = exports.createUserByTeacher = exports.signupUser = void 0;
+exports.changeStudentPassword = exports.updateUserRole = exports.updatePassword = exports.updateUserFullname = exports.savePushToken = exports.deleteUserAccount = exports.getTotalUsers = exports.DeactivateUserAccount = exports.getUserById = exports.getAllUsers = exports.getUsersSameCourse = exports.checkUserAuth = exports.logoutUser = exports.resendResetCode = exports.resetPassword = exports.verifyResetCode = exports.requestResetCode = exports.updateUserProfileForStudent = exports.completeProfile = exports.loginUser = exports.getCurrentUser = exports.loginAdmin = exports.updateUser = exports.createUserByAdmin = exports.createUserByTeacher = exports.signupUser = void 0;
 const user_Model_1 = require("./user.Model");
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
@@ -13,16 +13,20 @@ const cloudinary_1 = __importDefault(require("../../config/cloudinary"));
 const roles_1 = __importDefault(require("../../common/utils/roles"));
 const EmailTemplate_services_1 = require("../../services/EmailTemplate.services");
 const department_Model_1 = require("../Department/department.Model");
+const face_model_1 = require("../Face/face.model");
 const SALT_ROUNDS = 12;
 const signupUser = async (req, res) => {
     try {
-        const { firstName, lastName, email, password, role, studentId, yearLevel, major, course, section } = req.body;
+        const { firstName, lastName, email, password, role, studentId, yearLevel, major, course, section, gender } = req.body;
         if (!firstName || !lastName || !email || !password || !role) {
             return res.status(400).json({ message: "Please provide all required fields." });
         }
         if (role === "student") {
             if (!studentId || !firstName || !lastName || !password || !email) {
                 return res.status(400).json({ message: "Student ID, first name, last name, and password are required for students." });
+            }
+            if (!gender || !["Male", "Female"].includes(gender)) {
+                return res.status(400).json({ message: "Gender is required for students." });
             }
         }
         // Check if email exists
@@ -53,6 +57,7 @@ const signupUser = async (req, res) => {
             newUser.major = major;
             newUser.course = course;
             newUser.section = section;
+            newUser.gender = gender;
         }
         const createdUser = await user_Model_1.User.create(newUser);
         const token = jsonwebtoken_1.default.sign({ id: createdUser._id, role: createdUser.role }, process.env.JWT_SECRET || "defaultsecret", { expiresIn: "7d" });
@@ -69,6 +74,7 @@ const signupUser = async (req, res) => {
                 course: createdUser.course,
                 major: createdUser.major,
                 section: createdUser.section,
+                gender: createdUser.gender,
             },
             token,
         });
@@ -86,7 +92,7 @@ const createUserByTeacher = async (req, res) => {
                 message: "Only teachers can create users.",
             });
         }
-        const { firstName, lastName, email, password, role, studentId, major, yearLevel, section, } = req.body;
+        const { firstName, lastName, email, password, role, studentId, major, yearLevel, section, gender, } = req.body;
         if (!["student", "CSSG_officer", "Saso"].includes(role)) {
             return res.status(403).json({
                 message: "Teachers can only create students, CSSG officers, or Saso.",
@@ -95,6 +101,11 @@ const createUserByTeacher = async (req, res) => {
         if (!firstName || !lastName || !email || !role || !password) {
             return res.status(400).json({
                 message: "Missing required fields.",
+            });
+        }
+        if (role === "student" && (!gender || !["Male", "Female"].includes(gender))) {
+            return res.status(400).json({
+                message: "Gender is required for students.",
             });
         }
         const existingUser = await user_Model_1.User.findOne({ email });
@@ -135,6 +146,7 @@ const createUserByTeacher = async (req, res) => {
                 yearLevel,
                 section,
                 major,
+                gender,
             }),
         });
         return res.status(201).json({
@@ -166,7 +178,7 @@ const createUserByAdmin = async (req, res) => {
                 message: "Only admins can create users.",
             });
         }
-        const { firstName, lastName, email, password, role, course, studentId, yearLevel, section, major, } = req.body;
+        const { firstName, lastName, email, password, role, course, studentId, yearLevel, section, major, gender, } = req.body;
         // ✅ Allowed roles
         if (!["CSSG_Adviser", "student", "CSSG_officer", "Saso"].includes(role)) {
             return res.status(403).json({
@@ -200,6 +212,11 @@ const createUserByAdmin = async (req, res) => {
                     message: "Missing student information.",
                 });
             }
+            if (!gender || !["Male", "Female"].includes(gender)) {
+                return res.status(400).json({
+                    message: "Gender is required for students.",
+                });
+            }
             const existingStudent = await user_Model_1.User.findOne({ studentId });
             if (existingStudent) {
                 return res.status(400).json({
@@ -221,6 +238,7 @@ const createUserByAdmin = async (req, res) => {
                 studentId,
                 yearLevel,
                 section,
+                gender,
             },
         });
         return res.status(201).json({
@@ -253,7 +271,7 @@ const updateUser = async (req, res) => {
             });
         }
         const { id } = req.params;
-        const { firstName, lastName, email, role, course, major, studentId, yearLevel, section, password, } = req.body;
+        const { firstName, lastName, email, role, course, major, studentId, yearLevel, section, gender, password, } = req.body;
         const userToUpdate = await user_Model_1.User.findById(id);
         if (!userToUpdate) {
             return res.status(404).json({
@@ -297,6 +315,11 @@ const updateUser = async (req, res) => {
                     message: "Missing student fields.",
                 });
             }
+            if (!gender || !["Male", "Female"].includes(gender)) {
+                return res.status(400).json({
+                    message: "Gender is required for students.",
+                });
+            }
             const existingStudent = await user_Model_1.User.findOne({
                 studentId,
                 _id: { $ne: id },
@@ -319,6 +342,7 @@ const updateUser = async (req, res) => {
             updateData.yearLevel = yearLevel;
             updateData.section = section;
             updateData.major = major;
+            updateData.gender = gender;
         }
         if (password) {
             if (password.length < 6) {
@@ -434,6 +458,7 @@ const getCurrentUser = async (req, res) => {
                 major: user.major,
                 yearLevel: user.yearLevel,
                 section: user.section,
+                gender: user.gender,
                 isFaceRegistered: user.isFaceRegistered,
                 isActive: user.isActive,
                 createdAt: user.createdAt,
@@ -490,6 +515,7 @@ const loginUser = async (req, res) => {
             isProfileComplete = Boolean(user.yearLevel &&
                 user.course &&
                 user.section &&
+                user.gender &&
                 (!hasMajors || user.major));
         }
         const token = jsonwebtoken_1.default.sign({
@@ -517,6 +543,7 @@ const loginUser = async (req, res) => {
                 course: user.course,
                 major: user.major,
                 section: user.section,
+                gender: user.gender,
                 profileCompleted: isProfileComplete,
                 avatar: user.avatar,
                 isFaceRegistered: user.isFaceRegistered
@@ -539,11 +566,16 @@ const completeProfile = async (req, res) => {
                 message: "Unauthorized",
             });
         }
-        const { yearLevel, course, section, major } = req.body;
+        const { yearLevel, course, section, major, gender } = req.body;
         const userId = req.user._id;
         if (!yearLevel || !course || !section) {
             return res.status(400).json({
                 message: "Year level, course, and section are required.",
+            });
+        }
+        if (!gender || !["Male", "Female"].includes(gender)) {
+            return res.status(400).json({
+                message: "Gender is required.",
             });
         }
         const selectedCourse = await department_Model_1.Course.findOne({
@@ -564,6 +596,7 @@ const completeProfile = async (req, res) => {
             yearLevel: yearLevel.trim(),
             course: course.trim(),
             section: section.trim(),
+            gender,
             major: hasMajors ? major.trim() : "",
         }, {
             new: true,
@@ -573,8 +606,23 @@ const completeProfile = async (req, res) => {
                 message: "User not found.",
             });
         }
+        // Re-issue the token so it carries the freshly completed profile claims
+        const token = jsonwebtoken_1.default.sign({
+            id: updatedUser._id,
+            role: updatedUser.role,
+            email: updatedUser.email,
+            studentId: updatedUser.studentId,
+            course: updatedUser.course,
+            section: updatedUser.section,
+            yearLevel: updatedUser.yearLevel,
+            major: updatedUser.major,
+            gender: updatedUser.gender,
+            isFaceRegistered: updatedUser.isFaceRegistered,
+            avatar: updatedUser.avatar,
+        }, process.env.JWT_SECRET || "defaultsecret", { expiresIn: "7d" });
         return res.status(200).json({
             message: "Profile completed successfully",
+            token,
             user: updatedUser,
         });
     }
@@ -589,10 +637,15 @@ exports.completeProfile = completeProfile;
 const updateUserProfileForStudent = async (req, res) => {
     try {
         const userId = req.user?._id;
-        const { firstName, lastName, yearLevel, course, section, major } = req.body;
+        const { firstName, lastName, yearLevel, course, section, major, gender } = req.body;
         if (!firstName || !lastName || !yearLevel || !course || !section) {
             return res.status(400).json({
                 message: "All fields are required",
+            });
+        }
+        if (!gender || !["Male", "Female"].includes(gender)) {
+            return res.status(400).json({
+                message: "Gender is required",
             });
         }
         if (firstName.length < 2 || lastName.length < 2) {
@@ -623,7 +676,8 @@ const updateUserProfileForStudent = async (req, res) => {
             yearLevel: yearLevel.trim(),
             course: course.trim(),
             major: major.trim(),
-            section: section.trim()
+            section: section.trim(),
+            gender
         };
         // ✅ only add avatar if uploaded
         if (avatarUrl) {
@@ -828,6 +882,7 @@ const checkUserAuth = async (req, res) => {
                 yearLevel: req.user.yearLevel,
                 section: req.user.section,
                 course: req.user.course,
+                gender: req.user.gender,
                 avatar: req.user.avatar,
             },
         });
@@ -862,6 +917,7 @@ const getUsersSameCourse = async (req, res) => {
             course: user.course,
             studentId: user.studentId,
             yearLevel: user.yearLevel,
+            gender: user.gender,
             dateAdded: user.createdAt
                 ? new Date(user.createdAt).toLocaleDateString()
                 : "NA",
@@ -896,6 +952,10 @@ const getAllUsers = async (req, res) => {
             return res.status(403).json({ message: "Unauthorized" });
         }
         const users = await user_Model_1.User.find(roleFilter).select("-password");
+        // Attach the facial-recognition photo (faceUrl) for each user
+        const userIds = users.map((user) => user._id.toString());
+        const faces = await face_model_1.FaceUser.find({ userId: { $in: userIds } }).select("userId faceUrl");
+        const faceUrlByUserId = new Map(faces.map((face) => [face.userId, face.faceUrl]));
         return res.json(users.map((user) => ({
             id: user._id.toString(),
             firstName: user.firstName,
@@ -907,7 +967,9 @@ const getAllUsers = async (req, res) => {
             major: user.major,
             studentId: user.studentId,
             yearLevel: user.yearLevel,
+            gender: user.gender,
             avatar: user.avatar,
+            faceUrl: faceUrlByUserId.get(user._id.toString()) ?? null,
             isFaceRegistered: user.isFaceRegistered,
             isActive: user.isActive,
             dateAdded: user.createdAt
@@ -932,6 +994,54 @@ const getAllUsers = async (req, res) => {
     }
 };
 exports.getAllUsers = getAllUsers;
+const getUserById = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const user = await user_Model_1.User.findById(id).select("-password");
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+        const face = await face_model_1.FaceUser.findOne({
+            userId: user._id.toString(),
+        }).select("faceUrl");
+        return res.json({
+            id: user._id.toString(),
+            firstName: user.firstName,
+            lastName: user.lastName,
+            email: user.email,
+            role: user.role,
+            section: user.section,
+            course: user.course,
+            major: user.major,
+            studentId: user.studentId,
+            yearLevel: user.yearLevel,
+            gender: user.gender,
+            avatar: user.avatar,
+            faceUrl: face?.faceUrl ?? null,
+            isFaceRegistered: user.isFaceRegistered,
+            isActive: user.isActive,
+            dateAdded: user.createdAt
+                ? new Intl.DateTimeFormat("en-US", {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                }).format(new Date(user.createdAt))
+                : "NA",
+            lastActive: user.updatedAt
+                ? new Intl.DateTimeFormat("en-US", {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                }).format(new Date(user.updatedAt))
+                : "NA",
+        });
+    }
+    catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: "Server error" });
+    }
+};
+exports.getUserById = getUserById;
 const DeactivateUserAccount = async (req, res) => {
     try {
         const { id } = req.params;

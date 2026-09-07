@@ -57,14 +57,14 @@ class AttendanceController {
             }
             catch (error) {
                 console.log("FLASK ERROR:", error?.response?.data);
-                return res.status(401).json({
+                return res.status(422).json({
                     success: false,
                     message: error?.response?.data?.message ||
                         "Face recognition failed"
                 });
             }
             if (!recognizeData?.success) {
-                return res.status(401).json({
+                return res.status(422).json({
                     success: false,
                     message: recognizeData?.message ||
                         "Face not recognized"
@@ -77,14 +77,14 @@ class AttendanceController {
             console.log("RECOGNIZED STUDENT:", recognizedStudentId);
             console.log("CONFIDENCE:", confidence);
             if (!recognizedStudentId) {
-                return res.status(401).json({
+                return res.status(422).json({
                     success: false,
                     message: "Invalid recognized student"
                 });
             }
             // LOWER = BETTER
             if (confidence > 110) {
-                return res.status(401).json({
+                return res.status(422).json({
                     success: false,
                     message: "Face confidence too low"
                 });
@@ -202,6 +202,11 @@ class AttendanceController {
                     confidence,
                     status,
                     timeIn: now,
+                    timeInLocation: {
+                        latitude: lat,
+                        longitude: lng,
+                    },
+                    timeInDistance: distance,
                     imageUrl
                 });
                 return res.status(201).json({
@@ -232,6 +237,12 @@ class AttendanceController {
                 now;
             existingAttendance.confidence =
                 confidence;
+            existingAttendance.timeOutLocation = {
+                latitude: lat,
+                longitude: lng,
+            };
+            existingAttendance.timeOutDistance =
+                distance;
             existingAttendance.imageUrl =
                 imageUrl;
             await existingAttendance.save();

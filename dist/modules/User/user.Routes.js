@@ -24,6 +24,7 @@ router.post("/create-user-by-teacher", authmiddleware_1.requireAuth, user_Contro
 router.post("/create-user-by-admin", authmiddleware_1.requireAuth, user_Controller_1.createUserByAdmin);
 router.get("/get-all-users", authmiddleware_1.requireAuth, user_Controller_1.getAllUsers);
 router.get("/get-users-same-course", authmiddleware_1.requireAuth, user_Controller_1.getUsersSameCourse);
+router.get("/get-user/:id", authmiddleware_1.requireAuth, user_Controller_1.getUserById);
 router.get("/get-total-users", user_Controller_1.getTotalUsers);
 router.delete("/delete-user/:id", authmiddleware_1.requireAuth, user_Controller_1.deleteUserAccount);
 router.post("/save-push-token", AuthCookieMiddleware_1.MobileAuth, user_Controller_1.savePushToken);

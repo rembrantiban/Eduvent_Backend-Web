@@ -35,6 +35,10 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Attendance = void 0;
 const mongoose_1 = __importStar(require("mongoose"));
+const CoordinateSchema = new mongoose_1.Schema({
+    latitude: { type: Number },
+    longitude: { type: Number },
+}, { _id: false });
 const AttendanceSchema = new mongoose_1.Schema({
     eventId: {
         type: mongoose_1.Schema.Types.ObjectId,
@@ -70,6 +74,20 @@ const AttendanceSchema = new mongoose_1.Schema({
     timeOut: {
         type: Date,
         default: null,
+    },
+    timeInLocation: {
+        type: CoordinateSchema,
+        default: undefined,
+    },
+    timeOutLocation: {
+        type: CoordinateSchema,
+        default: undefined,
+    },
+    timeInDistance: {
+        type: Number,
+    },
+    timeOutDistance: {
+        type: Number,
     },
     imageUrl: {
         type: String,

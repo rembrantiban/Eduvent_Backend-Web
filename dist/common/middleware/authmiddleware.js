@@ -25,8 +25,15 @@ const requireAuth = async (req, res, next) => {
         next();
     }
     catch (err) {
-        console.error("Auth error:", err);
-        return res.status(401).json({ message: "Invalid token" });
+        // Reserve 401 for actual token problems; other failures (e.g. a transient
+        // DB error) must not masquerade as an expired session.
+        if (err instanceof jsonwebtoken_1.default.JsonWebTokenError ||
+            err instanceof jsonwebtoken_1.default.TokenExpiredError) {
+            console.error("Auth error:", err);
+            return res.status(401).json({ message: "Invalid token" });
+        }
+        console.error("Auth middleware error:", err);
+        return res.status(500).json({ message: "Authentication check failed" });
     }
 };
 exports.requireAuth = requireAuth;
