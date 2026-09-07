@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import cloudinary from "../../config/cloudinary";
 
+
 import { Attendance } from "./attendance.Model";
 import { Event, EventStatus } from "../Event/event.Model";
 import { Location } from "../Location/location.Model";
