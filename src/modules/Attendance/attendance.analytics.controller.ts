@@ -1,6 +1,5 @@
 import { Request, Response } from "express";
 import mongoose from "mongoose";
-
 import { Attendance } from "./attendance.Model";
 import { Event, EventStatus } from "../Event/event.Model";
 import { User } from "../User/user.Model";
