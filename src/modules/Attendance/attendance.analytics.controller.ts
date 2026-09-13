@@ -234,12 +234,12 @@ export const getAttendancePerEvent = async (
   }
 };
 
-export const getAttendanceByDepartment = async (
+export const getAttendanceByCourse = async (
   req: Request,
   res: Response
 ) => {
   try {
-    const departmentStats = await Attendance.aggregate([
+    const courseStats = await Attendance.aggregate([
       {
         $lookup: {
           from: "users",
@@ -255,7 +255,7 @@ export const getAttendanceByDepartment = async (
 
       {
         $group: {
-          _id: "$student.department",
+          _id: "$student.course",
 
           total: { $sum: 1 },
 
@@ -280,7 +280,7 @@ export const getAttendanceByDepartment = async (
         $project: {
           _id: 0,
 
-          department: "$_id",
+          course: "$_id",
 
           attendanceRate: {
             $round: [
@@ -309,29 +309,29 @@ export const getAttendanceByDepartment = async (
     ]);
 
     const average =
-      departmentStats.length > 0
+      courseStats.length > 0
         ? (
-            departmentStats.reduce(
-              (sum, dept) =>
+            courseStats.reduce(
+              (sum, course) =>
                 sum +
-                dept.attendanceRate,
+                course.attendanceRate,
               0
             ) /
-            departmentStats.length
+            courseStats.length
           ).toFixed(1)
         : 0;
 
-    const topDepartment =
-      departmentStats[0] || null;
+    const topCourse =
+      courseStats[0] || null;
 
     return res.status(200).json({
       success: true,
 
-      data: departmentStats,
+      data: courseStats,
 
       average,
 
-      topDepartment,
+      topCourse,
     });
   } catch (error) {
     console.error(error);
@@ -339,7 +339,7 @@ export const getAttendanceByDepartment = async (
     return res.status(500).json({
       success: false,
       message:
-        "Failed to fetch department analytics",
+        "Failed to fetch course analytics",
     });
   }
 };
