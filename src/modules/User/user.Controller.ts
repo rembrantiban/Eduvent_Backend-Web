@@ -639,6 +639,13 @@ export const loginUser = async (req: Request, res: Response) => {
       });
     }
 
+    // Mark this account as mobile-enabled so any route can tell the login
+    // came from the mobile app without an extra round trip (unlike pushToken,
+    // which needs the client to request permission first).
+    user.locationToken = true;
+    user.cameraToken = true;
+    await user.save();
+
     let isProfileComplete = true;
 
     if (user.role === "student" || user.role === "CSSG_officer") {
@@ -669,7 +676,9 @@ export const loginUser = async (req: Request, res: Response) => {
         yearLevel: user.yearLevel,
         major: user.major,
         isFaceRegistered: user.isFaceRegistered,
-        avatar: user.avatar
+        avatar: user.avatar,
+        locationToken: user.locationToken,
+        cameraToken: user.cameraToken
       },
       process.env.JWT_SECRET || "defaultsecret",
       { expiresIn: "7d" }
@@ -691,7 +700,9 @@ export const loginUser = async (req: Request, res: Response) => {
         gender: user.gender,
         profileCompleted: isProfileComplete,
         avatar: user.avatar,
-        isFaceRegistered: user.isFaceRegistered
+        isFaceRegistered: user.isFaceRegistered,
+        locationToken: user.locationToken,
+        cameraToken: user.cameraToken
       },
       token,
     });

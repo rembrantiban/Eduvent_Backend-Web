@@ -15,7 +15,11 @@ export interface IUser extends Document {
   isFaceRegistered: boolean,
 
    pushToken?: string;
-  
+
+  // Set automatically on mobile login to mark this account as mobile-enabled
+  locationToken?: boolean;
+  cameraToken?: boolean;
+
   // Student-specific fields
   studentId?: string;
   yearLevel?: string;
@@ -49,7 +53,16 @@ const UserSchema: Schema = new Schema<IUser>(
       type: String,
       default: null,
     },
-    
+
+    locationToken: {
+      type: Boolean,
+      default: false,
+    },
+    cameraToken: {
+      type: Boolean,
+      default: false,
+    },
+
     // reset password fields
     resetPasswordCode: { type: String },
     resetPasswordExpires: { type: Date },
