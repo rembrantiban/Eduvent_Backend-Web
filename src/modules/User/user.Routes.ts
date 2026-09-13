@@ -2,7 +2,8 @@ import express from "express";
 import { requireAuth } from "../../common/middleware/authmiddleware";
 import { MobileAuth } from "../../middleware/AuthCookieMiddleware"
 import {
-         signupUser, 
+         signupUser,
+         registerMobileUser,
          loginUser,
          completeProfile,
          requestResetCode,
@@ -34,6 +35,7 @@ import uploadImage from "../../middleware/multer";
 const router = express.Router();
 
 router.post("/signup", signupUser);
+router.post("/mobile-register", registerMobileUser);
 router.post("/login", loginUser);
 router.put("/update-user/:id", requireAuth, updateUser);
 router.post("/admin-login", loginAdmin);

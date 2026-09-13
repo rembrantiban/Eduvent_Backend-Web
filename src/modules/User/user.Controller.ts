@@ -95,6 +95,63 @@ export const signupUser = async (req: Request, res: Response) => {
   }
 };
 
+// Mobile-only registration. Unlike signupUser (shared with the web client,
+// which collects gender up front), the mobile app collects yearLevel/course/
+// section/gender later via completeProfile ("My Info"), so gender must NOT
+// be required here.
+export const registerMobileUser = async (req: Request, res: Response) => {
+  try {
+    const { firstName, lastName, email, password, studentId } = req.body;
+
+    if (!firstName || !lastName || !email || !password || !studentId) {
+      return res.status(400).json({ message: "Please provide all required fields." });
+    }
+
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ message: "Email already exists." });
+    }
+
+    const existingStudent = await User.findOne({ studentId });
+    if (existingStudent) {
+      return res.status(400).json({ message: "Student ID already exists." });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+
+    const createdUser = await User.create({
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      email,
+      password: hashedPassword,
+      role: "student",
+      studentId,
+    });
+
+    const token = jwt.sign(
+      { id: createdUser._id, role: createdUser.role },
+      process.env.JWT_SECRET || "defaultsecret",
+      { expiresIn: "7d" }
+    );
+
+    return res.status(201).json({
+      message: "Register successfully",
+      user: {
+        id: createdUser._id,
+        firstName: createdUser.firstName,
+        lastName: createdUser.lastName,
+        email: createdUser.email,
+        role: createdUser.role,
+        studentId: createdUser.studentId,
+      },
+      token,
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
 export const createUserByTeacher = async (
   req: Request,
   res: Response
