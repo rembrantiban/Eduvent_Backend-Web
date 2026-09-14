@@ -4,6 +4,7 @@ import { Attendance } from "./attendance.Model";
 import { Event, EventStatus } from "../Event/event.Model";
 import { User } from "../User/user.Model";
 
+
 export const getAttendanceAnalytics = async (
     req: Request,
     res: Response

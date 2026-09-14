@@ -603,6 +603,10 @@ export class AttendanceController {
                   timeIn: 1,
                   timeOut: 1,
                   imageUrl: 1,
+                  timeInLocation: 1,
+                  timeOutLocation: 1,
+                  timeInDistance: 1,
+                  timeOutDistance: 1,
 
                   user: {
                     firstName: "$user.firstName",
