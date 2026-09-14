@@ -702,6 +702,8 @@ export class AttendanceController {
           $project: {
             id: "$event._id",
             title: "$event.title",
+            description: "$event.description",
+            imageUrl: "$event.imageUrl",
             date: "$event.date",
             time: "$event.time",
             venue: "$event.venue",
