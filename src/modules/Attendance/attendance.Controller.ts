@@ -702,6 +702,7 @@ export class AttendanceController {
             time: "$event.time",
             venue: "$event.venue",
             department: "$event.department",
+            status: "$event.status",
             totalAttendees: 1
           }
         },
@@ -781,7 +782,7 @@ export class AttendanceController {
               lastName: "$user.lastName",
               email: "$user.email",
               studentId: "$user.studentId",
-              department: "$user.department",
+              course: "$user.course",
               major: "$user.major",
               section: "$user.section",
               yearLevel: "$user.yearLevel"
@@ -916,6 +917,58 @@ export class AttendanceController {
     }
   }
 
+  static async getMissedEvents(
+    req: Request,
+    res: Response
+  ) {
+
+    try {
+
+      const userId = req.user?._id;
+
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          message: "Unauthorized"
+        });
+      }
+
+      const userObjectId =
+        new mongoose.Types.ObjectId(userId);
+
+      const eventsJoined =
+        await Attendance.distinct(
+          "eventId",
+          {
+            userId: userObjectId
+          }
+        );
+
+      const missedEvents = await Event.find({
+        status: EventStatus.FINISHED,
+        _id: { $nin: eventsJoined }
+      })
+        .populate("locationId")
+        .sort({ date: -1 });
+
+      return res.status(200).json({
+        success: true,
+        total: missedEvents.length,
+        events: missedEvents
+      });
+
+    } catch (error) {
+
+      console.error(error);
+
+      return res.status(500).json({
+        success: false,
+        message: "Failed to fetch missed events"
+      });
+
+    }
+  }
+
   static async getMyAttendanceHistory(
     req: Request,
     res: Response
@@ -960,6 +1013,22 @@ export class AttendanceController {
           },
 
           {
+            $lookup: {
+              from: "locations",
+              localField: "event.locationId",
+              foreignField: "_id",
+              as: "eventLocation"
+            }
+          },
+
+          {
+            $unwind: {
+              path: "$eventLocation",
+              preserveNullAndEmptyArrays: true
+            }
+          },
+
+          {
             $project: {
 
               _id: 1,
@@ -981,9 +1050,12 @@ export class AttendanceController {
                 title: "$event.title",
                 description:
                   "$event.description",
-                venue: "$event.venue",
+                imageUrl: "$event.imageUrl",
+                venue: "$eventLocation.venue",
+                location: "$eventLocation.location",
                 date: "$event.date",
                 time: "$event.time",
+                endTime: "$event.endTime",
                 status: "$event.status",
                 department:
                   "$event.department"
