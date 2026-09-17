@@ -385,6 +385,7 @@ export const getOngoingEventAttendanceAnalytics = async (
             course: "$user.course",
             major: "$user.major",
             section: "$user.section",
+            yearLevel: "$user.yearLevel",
           },
           value: { $sum: 1 }, // attendees
         },
@@ -398,6 +399,7 @@ export const getOngoingEventAttendanceAnalytics = async (
             course: item._id.course,
             major: item._id.major,
             section: item._id.section,
+            yearLevel: item._id.yearLevel,
             role: "student",
           });
 
@@ -415,6 +417,7 @@ export const getOngoingEventAttendanceAnalytics = async (
           course: item._id.course,
           major: item._id.major,
           section: item._id.section,
+          yearLevel: item._id.yearLevel,
 
           value: item.value,
           totalStudents,

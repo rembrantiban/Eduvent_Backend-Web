@@ -334,8 +334,10 @@ export class AttendanceController {
             .split("T")[0]}T${event.time}:00`
         );
 
+      const lateGraceMs = 15 * 60 * 1000;
+
       const status =
-        now <= eventStart
+        now.getTime() <= eventStart.getTime() + lateGraceMs
           ? "Present"
           : "Late";
 
