@@ -10,6 +10,7 @@ import mongoose from "mongoose";
 import { User } from "../../modules/User/user.Model"
 import axios from "axios";
 import FLASK_API from "../../config/flask";
+import { getEventStart, isPastCloseTime } from "../../common/utils/attendanceWindow";
 
 export class AttendanceController {
 
@@ -291,6 +292,30 @@ export class AttendanceController {
       }
 
       // =========================
+      // ATTENDANCE WINDOW
+      // =========================
+      // Open from the start of the event, and stays open after the event
+      // finishes, until attendanceCloseAfterMinutes (from start) is up.
+      // 0 = never closes. Applies to both time-in and time-out.
+      // isClosed is set by the cron; the time check covers the gap
+      // between cron runs.
+
+      const now = new Date();
+
+      if (
+        event.isClosed ||
+        isPastCloseTime(event, now)
+      ) {
+
+        return res.status(403).json({
+          success: false,
+          message:
+            "Attendance for this event is already closed"
+        });
+
+      }
+
+      // =========================
       // FIND LOCATION
       // =========================
 
@@ -348,16 +373,15 @@ export class AttendanceController {
           userId
         });
 
-      const now = new Date();
-
       const eventStart =
-        new Date(
-          `${event.date
-            .toISOString()
-            .split("T")[0]}T${event.time}:00`
+        getEventStart(
+          event.date,
+          event.time
         );
 
-      const lateGraceMs = 15 * 60 * 1000;
+      // Recorded after lateThresholdMinutes from the start => "Late"
+      const lateGraceMs =
+        (event.lateThresholdMinutes ?? 15) * 60 * 1000;
 
       const status =
         now.getTime() <= eventStart.getTime() + lateGraceMs

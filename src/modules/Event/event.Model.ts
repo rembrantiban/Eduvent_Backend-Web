@@ -17,6 +17,12 @@ export interface IEvent extends Document {
   date: Date;
   time: string;
   endTime: string;
+  /** Minutes after start time a time-in is still "Present". Later = "Late". */
+  lateThresholdMinutes: number;
+  /** Minutes after start time when attendance (time-in and time-out) closes. 0 = never closes. */
+  attendanceCloseAfterMinutes: number;
+  /** Set by the close-attendance cron once the window has passed. */
+  isClosed: boolean;
   status: EventStatus;
 
   /* TARGETING */
@@ -60,6 +66,24 @@ const EventSchema: Schema = new Schema<IEvent>(
     endTime: {
       type: String,
       required: true,
+    },
+
+    lateThresholdMinutes: {
+      type: Number,
+      default: 15,
+      min: 0,
+    },
+
+    attendanceCloseAfterMinutes: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+
+    isClosed: {
+      type: Boolean,
+      default: false,
+      index: true,
     },
 
     status: {

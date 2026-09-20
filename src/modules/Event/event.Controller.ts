@@ -3,7 +3,44 @@ import { Event, EventStatus, IEvent } from "./event.Model";
 import cloudinary from "../../config/cloudinary";
 import mongoose from "mongoose";
 import { AnyBulkWriteOperation } from "mongoose";
+import { isPastCloseTime } from "../../common/utils/attendanceWindow";
 
+
+const parseAttendanceRules = (
+  lateRaw: unknown,
+  closeRaw: unknown
+): { late: number; close: number } | { error: string } => {
+  const late =
+    lateRaw === undefined || lateRaw === ""
+      ? 15
+      : Number(lateRaw);
+
+  const close =
+    closeRaw === undefined || closeRaw === ""
+      ? 0
+      : Number(closeRaw);
+
+  if (
+    !Number.isInteger(late) ||
+    late < 0 ||
+    !Number.isInteger(close) ||
+    close < 0
+  ) {
+    return {
+      error:
+        "Late threshold and attendance close time must be whole numbers of minutes (0 or more).",
+    };
+  }
+
+  if (close > 0 && close < late) {
+    return {
+      error:
+        "Attendance must stay open at least as long as the late threshold.",
+    };
+  }
+
+  return { late, close };
+};
 
 export const createEvent = async (
   req: Request,
@@ -37,6 +74,8 @@ export const createEvent = async (
       time,
       endTime,
       locationId,
+      lateThresholdMinutes,
+      attendanceCloseAfterMinutes,
 
       /* NEW */
       targetDepartments,
@@ -77,6 +116,17 @@ export const createEvent = async (
       return res.status(400).json({
         message:
           "Start time and end time cannot be the same.",
+      });
+    }
+
+    const attendanceRules = parseAttendanceRules(
+      lateThresholdMinutes,
+      attendanceCloseAfterMinutes
+    );
+
+    if ("error" in attendanceRules) {
+      return res.status(400).json({
+        message: attendanceRules.error,
       });
     }
 
@@ -171,6 +221,10 @@ export const createEvent = async (
       time,
       endTime,
       locationId,
+      lateThresholdMinutes:
+        attendanceRules.late,
+      attendanceCloseAfterMinutes:
+        attendanceRules.close,
       status,
 
       /* NEW TARGETING */
@@ -362,6 +416,9 @@ export const getStudentEvents = async (
         date
         time
         endTime
+        lateThresholdMinutes
+        attendanceCloseAfterMinutes
+        isClosed
         status
         imageUrl
         locationId
@@ -440,6 +497,8 @@ export const updateEvent = async (
       time,
       endTime,
       locationId,
+      lateThresholdMinutes,
+      attendanceCloseAfterMinutes,
 
       /* NEW */
       targetDepartments,
@@ -476,6 +535,18 @@ export const updateEvent = async (
       return res.status(400).json({
         message:
           "Start time and end time cannot be the same.",
+      });
+    }
+
+    const attendanceRules = parseAttendanceRules(
+      lateThresholdMinutes ?? event.lateThresholdMinutes,
+      attendanceCloseAfterMinutes ??
+        event.attendanceCloseAfterMinutes
+    );
+
+    if ("error" in attendanceRules) {
+      return res.status(400).json({
+        message: attendanceRules.error,
       });
     }
 
@@ -519,6 +590,15 @@ export const updateEvent = async (
 
     if (endTime)
       event.endTime = endTime;
+
+    event.lateThresholdMinutes =
+      attendanceRules.late;
+
+    event.attendanceCloseAfterMinutes =
+      attendanceRules.close;
+
+    // Extending the window (or changing the start) can re-open attendance.
+    event.isClosed = isPastCloseTime(event);
 
     if (locationId)
       event.locationId = locationId;
