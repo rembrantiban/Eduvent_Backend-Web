@@ -383,6 +383,15 @@ export class AttendanceController {
       const lateGraceMs =
         (event.lateThresholdMinutes ?? 15) * 60 * 1000;
 
+      console.log("LATE DEBUG:", {
+        eventDate: event.date,
+        eventTime: event.time,
+        lateThresholdMinutes: event.lateThresholdMinutes,
+        eventStart: eventStart.toISOString(),
+        now: now.toISOString(),
+        lateAt: new Date(eventStart.getTime() + lateGraceMs).toISOString(),
+      });
+
       const status =
         now.getTime() <= eventStart.getTime() + lateGraceMs
           ? "Present"

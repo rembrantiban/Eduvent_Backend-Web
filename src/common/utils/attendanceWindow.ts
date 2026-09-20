@@ -13,18 +13,26 @@ interface WindowEvent {
   attendanceCloseAfterMinutes?: number;
 }
 
+// Event dates/times are Manila wall-clock time (UTC+8, no DST). Build real
+// instants from them so the result does not depend on the server timezone
+// (a UTC host would otherwise be 8 hours off).
+const MANILA_OFFSET_MS = 8 * 60 * 60 * 1000;
+
 const atTime = (date: Date, time: string): Date => {
   const [h, m] = (time || "0:0").split(":").map(Number);
-  const d = new Date(date);
+
+  // Calendar day in Manila. Works whether the stored date is UTC midnight
+  // or Manila midnight.
+  const day = new Date(new Date(date).getTime() + MANILA_OFFSET_MS);
 
   return new Date(
-    d.getFullYear(),
-    d.getMonth(),
-    d.getDate(),
-    h || 0,
-    m || 0,
-    0,
-    0
+    Date.UTC(
+      day.getUTCFullYear(),
+      day.getUTCMonth(),
+      day.getUTCDate(),
+      h || 0,
+      m || 0
+    ) - MANILA_OFFSET_MS
   );
 };
 
