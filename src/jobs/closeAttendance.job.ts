@@ -4,13 +4,13 @@ import { isPastCloseTime } from "../common/utils/attendanceWindow";
 
 /**
  * Runs every minute and flips `isClosed` to true for every event whose
- * attendance window (start + attendanceCloseAfterMinutes) has passed.
+ * attendance window (end time + attendanceCloseAfterMinutes) has passed.
  */
 export const closeExpiredAttendance = async () => {
   const candidates = await Event.find({
     isClosed: false,
     attendanceCloseAfterMinutes: { $gt: 0 },
-  }).select("date time attendanceCloseAfterMinutes");
+  }).select("date time endTime attendanceCloseAfterMinutes");
 
   const now = new Date();
 

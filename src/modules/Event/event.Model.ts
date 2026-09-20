@@ -19,7 +19,7 @@ export interface IEvent extends Document {
   endTime: string;
   /** Minutes after start time a time-in is still "Present". Later = "Late". */
   lateThresholdMinutes: number;
-  /** Minutes after start time when attendance (time-in and time-out) closes. 0 = never closes. */
+  /** Minutes after the END time when attendance (time-in and time-out) closes. 0 = never closes. */
   attendanceCloseAfterMinutes: number;
   /** Set by the close-attendance cron once the window has passed. */
   isClosed: boolean;

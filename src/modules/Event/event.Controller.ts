@@ -32,13 +32,6 @@ const parseAttendanceRules = (
     };
   }
 
-  if (close > 0 && close < late) {
-    return {
-      error:
-        "Attendance must stay open at least as long as the late threshold.",
-    };
-  }
-
   return { late, close };
 };
 

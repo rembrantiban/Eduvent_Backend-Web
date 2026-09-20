@@ -295,7 +295,7 @@ export class AttendanceController {
       // ATTENDANCE WINDOW
       // =========================
       // Open from the start of the event, and stays open after the event
-      // finishes, until attendanceCloseAfterMinutes (from start) is up.
+      // finishes, until attendanceCloseAfterMinutes after the END time is up.
       // 0 = never closes. Applies to both time-in and time-out.
       // isClosed is set by the cron; the time check covers the gap
       // between cron runs.
