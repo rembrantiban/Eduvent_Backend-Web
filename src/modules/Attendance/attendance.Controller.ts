@@ -82,6 +82,23 @@ export class AttendanceController {
 
       let recognizeData;
 
+      const loggedInUser =
+        await User.findById(
+          req.user?._id
+        );
+
+      if (
+        !loggedInUser?.studentId
+      ) {
+
+        return res.status(403).json({
+          success: false,
+          message:
+            "Account has no student ID"
+        });
+
+      }
+
       try {
 
         const flaskResponse =
@@ -89,7 +106,13 @@ export class AttendanceController {
             `${FLASK_API}/recognize`,
             {
               image:
-                `data:image/jpeg;base64,${base64Image}`
+                `data:image/jpeg;base64,${base64Image}`,
+              expectedUsn:
+                String(
+                  loggedInUser.studentId
+                )
+                  .trim()
+                  .toLowerCase()
             }
           );
         console.log("ABOUT TO CALL FLASK");
@@ -159,7 +182,7 @@ export class AttendanceController {
       }
 
       // LOWER = BETTER
-      if (confidence > 110) {
+      if (confidence > 70) {
 
         return res.status(422).json({
           success: false,
