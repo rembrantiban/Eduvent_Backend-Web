@@ -10,7 +10,31 @@ import mongoose from "mongoose";
 import { User } from "../../modules/User/user.Model"
 import axios from "axios";
 import FLASK_API from "../../config/flask";
-import { getEventStart, isPastCloseTime } from "../../common/utils/attendanceWindow";
+import { getEventStart, getEventEnd, isPastCloseTime } from "../../common/utils/attendanceWindow";
+
+// "3:00 PM" in Manila time, the timezone events are scheduled in
+const formatManilaTime = (date: Date) =>
+  date.toLocaleTimeString("en-US", {
+    timeZone: "Asia/Manila",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+
+// "1 hour and 5 minutes", "25 minutes", "less than a minute"
+const formatWait = (ms: number) => {
+  const totalMinutes = Math.ceil(ms / 60000);
+
+  if (totalMinutes <= 1) return "less than a minute";
+
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  const parts = [];
+  if (hours) parts.push(`${hours} hour${hours > 1 ? "s" : ""}`);
+  if (minutes) parts.push(`${minutes} minute${minutes > 1 ? "s" : ""}`);
+
+  return parts.join(" and ");
+};
 
 export class AttendanceController {
 
@@ -71,6 +95,47 @@ export class AttendanceController {
       }
 
       const file = req.file;
+
+      // =========================
+      // TIME OUT ONLY AFTER THE EVENT ENDS
+      // =========================
+      // Checked before face recognition so an early student
+      // gets this message instead of a face/upload round trip.
+
+      if (attendanceType === "TIME_OUT") {
+
+        const eventForTimeOut =
+          await Event.findById(eventId);
+
+        if (eventForTimeOut) {
+
+          const eventEnd = getEventEnd(
+            eventForTimeOut.date,
+            eventForTimeOut.time,
+            eventForTimeOut.endTime
+          );
+
+          const waitMs =
+            eventEnd.getTime() - Date.now();
+
+          if (waitMs > 0) {
+
+            return res.status(403).json({
+              success: false,
+              code: "EVENT_NOT_ENDED",
+              message:
+                `You can't time out yet. "${eventForTimeOut.title}" ends at ` +
+                `${formatManilaTime(eventEnd)}. Please time out after the event ` +
+                `ends (${formatWait(waitMs)} left).`,
+              endsAt: eventEnd.toISOString(),
+              remainingMinutes: Math.ceil(waitMs / 60000),
+            });
+
+          }
+
+        }
+
+      }
 
       // =========================
       // SEND IMAGE TO FLASK
