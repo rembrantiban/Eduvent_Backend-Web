@@ -182,13 +182,15 @@ export class AttendanceController {
 
       }
 
-      // LOWER = BETTER
-      if (confidence > 70) {
+      // 0-100 match percentage, HIGHER = BETTER.
+      // The face API already rejects anything below its
+      // threshold, so only guard against a malformed value.
+      if (!Number.isFinite(confidence)) {
 
         return res.status(422).json({
           success: false,
           message:
-            "Face confidence too low"
+            "Invalid face confidence"
         });
 
       }
