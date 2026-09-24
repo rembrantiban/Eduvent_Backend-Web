@@ -1291,7 +1291,10 @@ export const getAllUsers = async (req: Request, res: Response) => {
       return res.status(403).json({ message: "Unauthorized" });
     }
 
-    const users = await User.find(roleFilter).select("-password");
+    // Newest accounts first
+    const users = await User.find(roleFilter)
+      .select("-password")
+      .sort({ createdAt: -1, _id: -1 });
 
     // Attach the facial-recognition photo (faceUrl) for each user
     const userIds = users.map((user) => user._id.toString());
