@@ -299,9 +299,16 @@ export const createUserByAdmin = async (
     }
 
     // ✅ Required fields
-    if (!firstName || !lastName || !email || !password || !role || !course) {
+    if (!firstName || !lastName || !email || !password || !role) {
       return res.status(400).json({
         message: "Missing required fields.",
+      });
+    }
+
+    // Course only applies to student-type accounts (Saso / CSSG Adviser are campus-wide)
+    if ((role === "student" || role === "CSSG_officer") && !course) {
+      return res.status(400).json({
+        message: "Course is required for students and CSSG officers.",
       });
     }
 
