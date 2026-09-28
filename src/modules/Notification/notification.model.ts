@@ -1,8 +1,19 @@
 import mongoose, { Schema, Document } from "mongoose";
 
+export const NOTIFICATION_CATEGORIES = [
+  "announcement",
+  "reminder",
+  "event",
+] as const;
+
+export type NotificationCategory =
+  (typeof NOTIFICATION_CATEGORIES)[number];
+
 export interface INotification extends Document {
   title: string;
   message: string;
+
+  category: NotificationCategory;
 
   sender?: mongoose.Types.ObjectId;
   
@@ -27,6 +38,12 @@ const NotificationSchema = new Schema<INotification>(
     message: {
       type: String,
       required: true,
+    },
+
+    category: {
+      type: String,
+      enum: NOTIFICATION_CATEGORIES,
+      default: "announcement",
     },
 
     sender: {

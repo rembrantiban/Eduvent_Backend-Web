@@ -1,5 +1,8 @@
 import { Request, Response } from "express";
-import { Notification } from "./notification.model";
+import {
+  Notification,
+  NOTIFICATION_CATEGORIES,
+} from "./notification.model";
 import { User } from "../User/user.Model";
 import { Event } from "../Event/event.Model";
 import { NotificationRead } from "./notification.read.model";
@@ -15,11 +18,38 @@ export const sendEventNotification = async (
       title,
       message,
       eventId,
+      category = "announcement",
     } = req.body;
 
     if (
       !title ||
-      !message ||
+      !message
+    ) {
+
+      return res.status(400).json({
+
+        success: false,
+
+        message:
+          "Title and message are required",
+      });
+    }
+
+    if (
+      !NOTIFICATION_CATEGORIES.includes(category)
+    ) {
+
+      return res.status(400).json({
+
+        success: false,
+
+        message:
+          "Invalid category",
+      });
+    }
+
+    if (
+      category === "event" &&
       !eventId
     ) {
 
@@ -28,16 +58,21 @@ export const sendEventNotification = async (
         success: false,
 
         message:
-          "Title, message, and eventId are required",
+          "An event is required for the Events category",
       });
     }
 
-    /* FIND EVENT */
+    /* FIND EVENT (only for event announcements) */
 
     const event =
-      await Event.findById(eventId);
+      category === "event"
+        ? await Event.findById(eventId)
+        : null;
 
-    if (!event) {
+    if (
+      category === "event" &&
+      !event
+    ) {
 
       return res.status(404).json({
 
@@ -62,6 +97,7 @@ export const sendEventNotification = async (
     /* TARGET FILTERS */
 
     if (
+      event &&
       !event.isForAllStudents
     ) {
 
@@ -127,6 +163,16 @@ export const sendEventNotification = async (
 
     /* SAVE NOTIFICATION */
 
+    const data =
+      event
+        ? {
+            screen: "EventDetails",
+            eventId: event._id.toString(),
+          }
+        : {
+            screen: "Announcements",
+          };
+
     const notification =
       await Notification.create({
 
@@ -134,20 +180,15 @@ export const sendEventNotification = async (
 
         message,
 
+        category,
+
         sender:
           req.user?._id,
 
         eventId:
-          event._id,
+          event?._id,
 
-        data: {
-
-          screen:
-            "EventDetails",
-
-          eventId:
-            event._id.toString(),
-        },
+        data,
       });
 
     /* BUILD PUSH PAYLOAD */
@@ -166,11 +207,12 @@ export const sendEventNotification = async (
 
         data: {
 
-          screen:
-            "EventDetails",
+          ...data,
 
-          eventId:
-            event._id.toString(),
+          notificationId:
+            notification._id.toString(),
+
+          category,
 
           senderName:
             `${req.user?.firstName} ${req.user?.lastName}`,
@@ -279,7 +321,8 @@ export const getAnnouncements = async (req: Request, res: Response) => {
           const event =
             notification.eventId;
 
-          if (!event) return false;
+          /* General announcements / reminders go to everyone */
+          if (!event) return true;
 
           if (
             event.isForAllStudents
@@ -371,6 +414,7 @@ export const updateNotification = async (
       title,
       message,
       eventId,
+      category,
     } = req.body;
 
     const notification =
@@ -383,8 +427,36 @@ export const updateNotification = async (
       });
     }
 
+    if (category) {
+      if (!NOTIFICATION_CATEGORIES.includes(category)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid category",
+        });
+      }
+
+      if (
+        category === "event" &&
+        !eventId &&
+        !notification.eventId
+      ) {
+        return res.status(400).json({
+          success: false,
+          message: "An event is required for the Events category",
+        });
+      }
+
+      notification.category = category;
+
+      // Only event announcements stay linked to an event
+      if (category !== "event") {
+        notification.eventId = undefined;
+        notification.data = { screen: "Announcements" };
+      }
+    }
+
     // Validate event if changing event
-    if (eventId) {
+    if (eventId && notification.category === "event") {
       const event = await Event.findById(eventId);
 
       if (!event) {
@@ -535,7 +607,8 @@ export const countUserUnreadNotification = async (
       (notification: any) => {
         const event = notification.eventId;
 
-        if (!event) return false;
+        // General announcements / reminders go to everyone
+        if (!event) return true;
 
         if (event.isForAllStudents) {
           return true;
