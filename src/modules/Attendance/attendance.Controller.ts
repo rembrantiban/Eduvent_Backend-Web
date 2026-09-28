@@ -420,6 +420,7 @@ export class AttendanceController {
 
       const allowedRadius = 50;
 
+      
       if (distance > allowedRadius) {
 
         return res.status(403).json({
