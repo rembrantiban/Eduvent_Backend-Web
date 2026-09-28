@@ -487,7 +487,12 @@ export const getAllNotifications = async (
           targetYearLevels
           targetMajors
           targetSections
+          locationId
         `,
+        populate: {
+          path: "locationId",
+          select: "venue",
+        },
       })
       .sort({
         createdAt: -1,
