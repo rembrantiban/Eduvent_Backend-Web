@@ -418,7 +418,7 @@ export class AttendanceController {
         distance
       );
 
-      const allowedRadius = 100;
+      const allowedRadius = 50;
 
       if (distance > allowedRadius) {
 
