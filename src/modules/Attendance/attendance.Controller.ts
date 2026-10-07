@@ -345,9 +345,10 @@ export class AttendanceController {
       // =========================
 
       const event =
-        await Event.findById(
-          eventId
-        );
+        await Event.findOne({
+          _id: eventId,
+          ...NOT_DELETED,
+        });
 
       if (!event) {
 
@@ -1006,6 +1007,7 @@ export class AttendanceController {
         await Event.countDocuments({
 
           status: EventStatus.FINISHED,
+          ...NOT_DELETED,
 
           _id: {
             $nin: eventsJoined
@@ -1017,7 +1019,8 @@ export class AttendanceController {
 
       const upcomingEventsCount =
         await Event.countDocuments({
-          status: EventStatus.UPCOMING
+          status: EventStatus.UPCOMING,
+          ...NOT_DELETED,
         });
 
       return res.status(200).json({
@@ -1083,6 +1086,7 @@ export class AttendanceController {
 
       const missedEvents = await Event.find({
         status: EventStatus.FINISHED,
+        ...NOT_DELETED,
         _id: { $nin: eventsJoined }
       })
         .populate("locationId")
@@ -1274,6 +1278,7 @@ export class AttendanceController {
       const missedCount =
         await Event.countDocuments({
           status: EventStatus.FINISHED,
+          ...NOT_DELETED,
           _id: {
             $nin: joinedEventIds,
           },

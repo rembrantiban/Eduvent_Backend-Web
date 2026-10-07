@@ -4,6 +4,7 @@ import {
     getEvents,
     updateEvent,
     deleteEvent,
+    restoreEvent,
     updateEventStatusToCanceled,
     getUpComingEvents,
     getFinishedEvents,
@@ -28,6 +29,7 @@ router.get("/totalUpcomingEvents", getTotalUpComingEvents );
 router.get("/finishedEvent", getFinishedEvents );
 router.get("/studentEvents", MobileAuth, getStudentEvents );    
 router.delete('/deleteEvent/:id', deleteEvent);
+router.put('/restoreEvent/:id', restoreEvent);
 router.get("/ongoingEvents", getTotalOngoingEvents);
 router.get("/eventTrends", getEventTrends);
 router.get("/eventStatusAnalytics", getEventStatusAnalytics);

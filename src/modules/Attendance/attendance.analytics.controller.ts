@@ -19,7 +19,7 @@ export const getAttendanceAnalytics = async (
             });
         }
 
-        const event = await Event.findById(eventId);
+        const event = await Event.findOne({ _id: eventId, ...NOT_DELETED });
 
         if (!event) {
             return res.status(404).json({
@@ -355,6 +355,7 @@ export const getOngoingEventAttendanceAnalytics = async (
   try {
     const ongoingEvents = await Event.find({
       status: EventStatus.ONGOING,
+      ...NOT_DELETED,
     }).select("_id title");
 
     const eventIds = ongoingEvents.map(
@@ -455,7 +456,7 @@ export const getOngoingEventAttendanceAnalytics = async (
   ) => {
     try {
 
-      const events = await Event.find()
+      const events = await Event.find(NOT_DELETED)
         .populate(
           "locationId",
           "venue"

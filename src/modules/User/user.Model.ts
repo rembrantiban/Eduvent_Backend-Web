@@ -88,7 +88,6 @@ const UserSchema: Schema = new Schema<IUser>(
   { timestamps: true }
 );
 
-/** Query filter for accounts that have not been soft-deleted (older docs have no isDeleted field). */
-export const NOT_DELETED = { isDeleted: { $ne: true } } as const;
+export { NOT_DELETED } from "../../common/utils/softDelete";
 
 export const User = mongoose.model<IUser>("User", UserSchema);

@@ -66,7 +66,7 @@ export const sendEventNotification = async (
 
     const event =
       category === "event"
-        ? await Event.findById(eventId)
+        ? await Event.findOne({ _id: eventId, ...NOT_DELETED })
         : null;
 
     if (
@@ -457,7 +457,7 @@ export const updateNotification = async (
 
     // Validate event if changing event
     if (eventId && notification.category === "event") {
-      const event = await Event.findById(eventId);
+      const event = await Event.findOne({ _id: eventId, ...NOT_DELETED });
 
       if (!event) {
         return res.status(404).json({

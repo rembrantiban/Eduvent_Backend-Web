@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { Event, EventStatus, IEvent } from "./event.Model";
+import { Event, EventStatus, IEvent, NOT_DELETED } from "./event.Model";
 import cloudinary from "../../config/cloudinary";
 import mongoose from "mongoose";
 import { AnyBulkWriteOperation } from "mongoose";
@@ -263,7 +263,19 @@ export const createEvent = async (
 
 export const getEvents = async (req: Request, res: Response) => {
   try {
-    const events = await Event.find()
+    // ?deleted=true lists the soft-deleted events (for the restore view)
+    if (req.query.deleted === "true") {
+      const deletedEvents = await Event.find({ isDeleted: true })
+        .populate("locationId")
+        .sort({ deletedAt: -1 });
+
+      return res.status(200).json({
+        success: true,
+        data: deletedEvents,
+      });
+    }
+
+    const events = await Event.find(NOT_DELETED)
       .populate("locationId")
       .sort({ createdAt: -1 });
 
@@ -368,6 +380,8 @@ export const getStudentEvents = async (
     }
 
     const events = await Event.find({
+
+      ...NOT_DELETED,
 
       $or: [
 
@@ -501,7 +515,7 @@ export const updateEvent = async (
       isForAllStudents,
     } = req.body;
 
-    const event = await Event.findById(eventId);
+    const event = await Event.findOne({ _id: eventId, ...NOT_DELETED });
 
     if (!event) {
       return res.status(404).json({
@@ -738,26 +752,20 @@ export const deleteEvent = async (req: Request, res: Response) => {
   try {
     const eventId = req.params.id;
 
-    const event = await Event.findById(eventId);
+    // Soft delete: the event (and its image) is kept so it can be restored
+    const event = await Event.findOneAndUpdate(
+      { _id: eventId, ...NOT_DELETED },
+      { isDeleted: true, deletedAt: new Date() },
+      { new: true }
+    );
+
     if (!event) {
       return res.status(404).json({ message: "Event not found" });
     }
 
-    if (event.imageUrl) {
-      const publicId = getPublicIdFromUrl(event.imageUrl);
-
-      if (publicId) {
-        await cloudinary.uploader.destroy(publicId, {
-          resource_type: "image",
-        });
-      }
-    }
-
-    await event.deleteOne();
-
     return res.status(200).json({
       success: true,
-      message: "Event and image deleted successfully",
+      message: "Event deleted successfully",
     });
   } catch (err) {
     console.error("Error in deleteEvent", err);
@@ -769,10 +777,39 @@ export const deleteEvent = async (req: Request, res: Response) => {
 };
 
 
+export const restoreEvent = async (req: Request, res: Response) => {
+  try {
+    const eventId = req.params.id;
+
+    const event = await Event.findOneAndUpdate(
+      { _id: eventId, isDeleted: true },
+      { isDeleted: false, deletedAt: null },
+      { new: true }
+    ).populate("locationId");
+
+    if (!event) {
+      return res.status(404).json({ message: "Deleted event not found" });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Event restored successfully",
+      data: event,
+    });
+  } catch (err) {
+    console.error("Error in restoreEvent", err);
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
+  }
+};
+
+
 export const updateEventStatusToCanceled = async (req: Request, res: Response) => {
   try {
     const eventId = req.params.id;
-    const event = await Event.findById(eventId);
+    const event = await Event.findOne({ _id: eventId, ...NOT_DELETED });
 
     if (event?.status === EventStatus.FINISHED) {
       return res.status(400).json({ message: "Cannot cancel a finished event" });
@@ -805,6 +842,7 @@ export const getUpComingEvents = async (req: Request, res: Response) => {
   try {
     const upComingEvents = await Event.find({
       status: EventStatus.UPCOMING,
+      ...NOT_DELETED,
     }).populate("locationId");
 
     return res.status(200).json({
@@ -824,6 +862,7 @@ export const getFinishedEvents = async (req: Request, res: Response) => {
   try {
     const finishedEvents = await Event.find({
       status: EventStatus.FINISHED,
+      ...NOT_DELETED,
     }).populate("locationId");
 
     return res.status(200).json({
@@ -842,6 +881,7 @@ export const getTotalUpComingEvents = async (req: Request, res: Response) => {
   try {
     const upComingEvents = await Event.find({
       status: EventStatus.UPCOMING,
+      ...NOT_DELETED,
     }).populate("locationId");
 
     return res.status(200).json({
@@ -860,6 +900,7 @@ export const getTotalOngoingEvents = async (req: Request, res: Response) => {
   try {
     const onGoingEvents = await Event.find({
       status: EventStatus.ONGOING,
+      ...NOT_DELETED,
     }).populate("locationId");
 
     return res.status(200).json({
@@ -883,6 +924,7 @@ export const getEventTrends = async (
 
     if (type === "weekly") {
       const result = await Event.aggregate([
+        { $match: NOT_DELETED },
         {
           $group: {
             _id: {
@@ -924,6 +966,7 @@ export const getEventTrends = async (
 
     if (type === "monthly") {
       const result = await Event.aggregate([
+        { $match: NOT_DELETED },
         {
           $group: {
             _id: {
@@ -984,18 +1027,22 @@ export const getEventStatusAnalytics = async (
   try {
     const completed = await Event.countDocuments({
       status: EventStatus.FINISHED,
+      ...NOT_DELETED,
     });
 
     const ongoing = await Event.countDocuments({
       status: EventStatus.ONGOING,
+      ...NOT_DELETED,
     });
 
     const upcoming = await Event.countDocuments({
       status: EventStatus.UPCOMING,
+      ...NOT_DELETED,
     });
 
     const cancelled = await Event.countDocuments({
       status: EventStatus.CANCELLED,
+      ...NOT_DELETED,
     });
 
     const total =
@@ -1057,7 +1104,7 @@ export const getFinishedEventTitles = async (
 ) => {
   try {
     const events = await Event.find(
-      { status: EventStatus.FINISHED },
+      { status: EventStatus.FINISHED, ...NOT_DELETED },
       { title: 1, _id: 1 } // only return id and title
     ).sort({ date: -1 });
 

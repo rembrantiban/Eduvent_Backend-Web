@@ -32,6 +32,10 @@ export interface IEvent extends Document {
   targetSections?: string[];
   isForAllStudents: boolean;
 
+  /* SOFT DELETE — deleted events are hidden everywhere but can be restored */
+  isDeleted: boolean;
+  deletedAt?: Date | null;
+
   locationId: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
@@ -118,6 +122,17 @@ const EventSchema: Schema = new Schema<IEvent>(
       default: false,
     },
 
+    isDeleted: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+
+    deletedAt: {
+      type: Date,
+      default: null,
+    },
+
     locationId: {
       type: mongoose.Types.ObjectId,
       ref: "Location",
@@ -126,6 +141,8 @@ const EventSchema: Schema = new Schema<IEvent>(
   },
   { timestamps: true }
 );
+
+export { NOT_DELETED } from "../../common/utils/softDelete";
 
 export const Event = mongoose.model<IEvent>(
   "Event",

@@ -1,5 +1,5 @@
 import cron from "node-cron";
-import { Event } from "../modules/Event/event.Model";
+import { Event, NOT_DELETED } from "../modules/Event/event.Model";
 import { isPastCloseTime } from "../common/utils/attendanceWindow";
 
 /**
@@ -10,6 +10,7 @@ export const closeExpiredAttendance = async () => {
   const candidates = await Event.find({
     isClosed: false,
     attendanceCloseAfterMinutes: { $gt: 0 },
+    ...NOT_DELETED,
   }).select("date time endTime attendanceCloseAfterMinutes");
 
   const now = new Date();
