@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { User, IUser } from "./user.Model";
+import { User, IUser, NOT_DELETED } from "./user.Model";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import validator from "validator";
@@ -554,6 +554,7 @@ export const loginAdmin = async (req: Request, res: Response) => {
     const user = await User.findOne({
       email: email,
       role: { $in: ["admin", "CSSG_Adviser", "Saso", "CSSG_officer"] },
+      ...NOT_DELETED,
     }).select("+password");
 
     if (!user) {
@@ -681,6 +682,7 @@ export const loginUser = async (req: Request, res: Response) => {
         { email: normalizedIdentifier },
         { studentId: normalizedIdentifier },
       ],
+      ...NOT_DELETED,
     }).select("+password");
 
     if (user && user.isActive === false) {
@@ -972,7 +974,7 @@ export const requestResetCode = async (
 
     console.log("EMAIL:", email);
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email, ...NOT_DELETED });
 
     if (!user) {
       return res.status(404).json({
@@ -1045,6 +1047,7 @@ export const verifyResetCode = async (req: Request, res: Response) => {
       email,
       resetPasswordCode: hashedCode,
       resetPasswordExpires: { $gt: new Date() },
+      ...NOT_DELETED,
     });
 
     if (!user) {
@@ -1068,6 +1071,7 @@ export const resetPassword = async (req: Request, res: Response) => {
       email,
       resetPasswordVerified: true,
       resetPasswordExpires: { $gt: new Date() },
+      ...NOT_DELETED,
     });
 
     if (!user) {
@@ -1109,6 +1113,7 @@ export const resendResetCode = async (
 
     const user = await User.findOne({
       email,
+      ...NOT_DELETED,
     });
 
     if (!user) {
@@ -1238,6 +1243,7 @@ export const getUsersSameCourse = async (
     const users = await User.find({
       course: req.user.course,
       role: { $ne: "CSSG_Adviser" },
+      ...NOT_DELETED,
     }).select("-password");
 
     return res.json(
@@ -1272,6 +1278,8 @@ export const getUsersSameCourse = async (
 export const getAllUsers = async (req: Request, res: Response) => {
   try {
     const currentUserRole = req.user?.role;
+    // ?deleted=true lists the soft-deleted accounts (for the restore view)
+    const showDeleted = req.query.deleted === "true";
 
     let roleFilter: any = {};
 
@@ -1292,9 +1300,11 @@ export const getAllUsers = async (req: Request, res: Response) => {
     }
 
     // Newest accounts first
-    const users = await User.find(roleFilter)
+    const deletedFilter = showDeleted ? { isDeleted: true } : NOT_DELETED;
+
+    const users = await User.find({ ...roleFilter, ...deletedFilter })
       .select("-password")
-      .sort({ createdAt: -1, _id: -1 });
+      .sort(showDeleted ? { deletedAt: -1, _id: -1 } : { createdAt: -1, _id: -1 });
 
     // Attach the facial-recognition photo (faceUrl) for each user
     const userIds = users.map((user) => user._id.toString());
@@ -1322,6 +1332,8 @@ export const getAllUsers = async (req: Request, res: Response) => {
         faceUrl: faceUrlByUserId.get(user._id.toString()) ?? null,
         isFaceRegistered: user.isFaceRegistered,
         isActive: user.isActive,
+        isDeleted: user.isDeleted === true,
+        deletedAt: user.deletedAt ?? null,
         dateAdded: user.createdAt
           ? new Intl.DateTimeFormat("en-US", {
             year: "numeric",
@@ -1376,6 +1388,8 @@ export const getUserById = async (req: Request, res: Response) => {
       faceUrl: face?.faceUrl ?? null,
       isFaceRegistered: user.isFaceRegistered,
       isActive: user.isActive,
+      isDeleted: user.isDeleted === true,
+      deletedAt: user.deletedAt ?? null,
       dateAdded: user.createdAt
         ? new Intl.DateTimeFormat("en-US", {
           year: "numeric",
@@ -1441,7 +1455,7 @@ export const DeactivateUserAccount = async (
 
 export const getTotalUsers = async (req: Request, res: Response) => {
   try {
-    const totalUsers = await User.countDocuments({ role: { $ne: "admin" } });
+    const totalUsers = await User.countDocuments({ role: { $ne: "admin" }, ...NOT_DELETED });
     return res.json({ totalUsers });
   } catch (error) {
     console.error(error);
@@ -1450,16 +1464,54 @@ export const getTotalUsers = async (req: Request, res: Response) => {
 };
 
 
+/** Soft delete: the account is flagged and hidden, and can be restored later. */
 export const deleteUserAccount = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const deleteUser = await User.findByIdAndDelete(id);
+
+    if (req.user?._id?.toString() === id) {
+      return res.status(400).json({ success: false, message: "You cannot delete your own account" });
+    }
+
+    const deleteUser = await User.findOneAndUpdate(
+      { _id: id, ...NOT_DELETED },
+      {
+        isDeleted: true,
+        deletedAt: new Date(),
+        deletedBy: req.user?._id ?? null,
+        // stop push notifications to the deleted account's device
+        pushToken: null,
+      },
+      { new: true }
+    ).select("-password");
 
     if (!deleteUser) {
       return res.status(404).json({ success: false, message: "User not found" });
     }
 
     return res.status(200).json({ success: true, deleteUser: deleteUser })
+  }
+  catch (error) {
+    console.error("Internal Server Error", error)
+    return res.status(500).json({ success: false, message: "Something went wrong" })
+  }
+}
+
+export const restoreUserAccount = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const user = await User.findOneAndUpdate(
+      { _id: id, isDeleted: true },
+      { isDeleted: false, deletedAt: null, deletedBy: null },
+      { new: true }
+    ).select("-password");
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: "Deleted user not found" });
+    }
+
+    return res.status(200).json({ success: true, message: "User restored successfully", user })
   }
   catch (error) {
     console.error("Internal Server Error", error)

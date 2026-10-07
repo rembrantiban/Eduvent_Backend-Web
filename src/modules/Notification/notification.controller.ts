@@ -3,7 +3,7 @@ import {
   Notification,
   NOTIFICATION_CATEGORIES,
 } from "./notification.model";
-import { User } from "../User/user.Model";
+import { User, NOT_DELETED } from "../User/user.Model";
 import { Event } from "../Event/event.Model";
 import { NotificationRead } from "./notification.read.model";
 
@@ -159,7 +159,7 @@ export const sendEventNotification = async (
     /* FIND MATCHING STUDENTS */
 
     const students =
-      await User.find(query);
+      await User.find({ ...query, ...NOT_DELETED });
 
     /* SAVE NOTIFICATION */
 

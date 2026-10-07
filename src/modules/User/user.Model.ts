@@ -10,6 +10,11 @@ export interface IUser extends Document {
   role: UserRole;
   isActive: boolean;
   avatar: string;
+
+  // Soft delete — deleted accounts are hidden everywhere but can be restored
+  isDeleted: boolean;
+  deletedAt?: Date | null;
+  deletedBy?: mongoose.Types.ObjectId | null;
   //face Register 
 
   isFaceRegistered: boolean,
@@ -45,6 +50,10 @@ const UserSchema: Schema = new Schema<IUser>(
     isActive: { type: Boolean, default: true },
     avatar: { type: String, default: null },
 
+    isDeleted: { type: Boolean, default: false, index: true },
+    deletedAt: { type: Date, default: null },
+    deletedBy: { type: Schema.Types.ObjectId, ref: "User", default: null },
+
 
     isFaceRegistered:{ type: Boolean, default: false },
 
@@ -78,5 +87,8 @@ const UserSchema: Schema = new Schema<IUser>(
   },
   { timestamps: true }
 );
+
+/** Query filter for accounts that have not been soft-deleted (older docs have no isDeleted field). */
+export const NOT_DELETED = { isDeleted: { $ne: true } } as const;
 
 export const User = mongoose.model<IUser>("User", UserSchema);

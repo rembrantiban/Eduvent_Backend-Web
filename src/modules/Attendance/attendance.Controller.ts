@@ -7,7 +7,7 @@ import { Event, EventStatus } from "../Event/event.Model";
 import { Location } from "../Location/location.Model";
 import { calculateDistance } from "../../common/utils/distance";
 import mongoose from "mongoose";
-import { User } from "../../modules/User/user.Model"
+import { User, NOT_DELETED } from "../../modules/User/user.Model"
 import axios from "axios";
 import FLASK_API from "../../config/flask";
 import { getEventStart, getEventEnd, isPastCloseTime } from "../../common/utils/attendanceWindow";
@@ -287,7 +287,8 @@ export class AttendanceController {
       const user =
         await User.findOne({
           studentId:
-            recognizedStudentId
+            recognizedStudentId,
+          ...NOT_DELETED,
         });
 
 

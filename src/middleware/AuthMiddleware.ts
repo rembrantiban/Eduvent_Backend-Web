@@ -21,7 +21,7 @@ export const AuthCookieMiddleware = async (
 
     const user = await User.findById(decoded.id).select("-password");
 
-    if (!user) {
+    if (!user || user.isDeleted) {
       return res.status(401).json({ message: "User not found" });
     }
 

@@ -19,6 +19,7 @@ import {
          createUserByAdmin,
          getTotalUsers,
          deleteUserAccount,
+         restoreUserAccount,
          savePushToken,
          DeactivateUserAccount,
          updateUserFullname,
@@ -53,6 +54,7 @@ router.get("/get-users-same-course", requireAuth, getUsersSameCourse);
 router.get("/get-user/:id", requireAuth, getUserById);
 router.get("/get-total-users", getTotalUsers);
 router.delete("/delete-user/:id", requireAuth, deleteUserAccount);
+router.put("/restore-user/:id", requireAuth, restoreUserAccount);
 router.post("/save-push-token", MobileAuth, savePushToken);
 router.put("/update-fullname", requireAuth,uploadImage.single("avatar"), updateUserFullname);
 router.put("/update-password", requireAuth, updatePassword);

@@ -23,7 +23,7 @@ export const requireAuth = async (
 
     const user = await User.findById(decoded.id);
 
-    if (!user) {
+    if (!user || user.isDeleted) {
       return res.status(401).json({ message: "User not found" });
     }
 

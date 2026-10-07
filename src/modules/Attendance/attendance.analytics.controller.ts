@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import mongoose from "mongoose";
 import { Attendance } from "./attendance.Model";
 import { Event, EventStatus } from "../Event/event.Model";
-import { User } from "../User/user.Model";
+import { User, NOT_DELETED } from "../User/user.Model";
 
 
 export const getAttendanceAnalytics = async (
@@ -38,10 +38,12 @@ export const getAttendanceAnalytics = async (
         if (event.isForAllStudents) {
             eligibleUsers = await User.find({
                 role: "student",
+                ...NOT_DELETED,
             });
         } else {
             eligibleUsers = await User.find({
                 role: "student",
+                ...NOT_DELETED,
 
                 ...(event.targetDepartments?.length && {
                     course: {
@@ -401,6 +403,7 @@ export const getOngoingEventAttendanceAnalytics = async (
             section: item._id.section,
             yearLevel: item._id.yearLevel,
             role: "student",
+            ...NOT_DELETED,
           });
 
         const attendanceRate =
