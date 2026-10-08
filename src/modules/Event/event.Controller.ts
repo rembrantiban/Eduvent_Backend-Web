@@ -247,11 +247,7 @@ export const createEvent = async (
       );
 
     /* Notify eligible participants in the background so a push failure never blocks creation */
-    notifyEventCreated(
-      savedEvent,
-      req.user?._id,
-      req.user ? `${req.user.firstName} ${req.user.lastName}` : undefined
-    ).catch((err) =>
+    notifyEventCreated(savedEvent, req.user).catch((err) =>
       console.error(err, "Error notifying event participants")
     );
 

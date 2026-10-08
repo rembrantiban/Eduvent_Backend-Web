@@ -36,13 +36,19 @@ export const findTargetStudents = async (
   return User.find({ ...query, ...NOT_DELETED });
 };
 
+export interface NotificationSender {
+  _id: string;
+  firstName: string;
+  lastName: string;
+  avatar?: string;
+}
+
 interface SendNotificationOptions {
   title: string;
   message: string;
   category: NotificationCategory;
   event: IEvent | null;
-  senderId?: string;
-  senderName?: string;
+  sender?: NotificationSender;
 }
 
 /* Saves the notification and pushes it to every matching student */
@@ -51,8 +57,7 @@ export const createAndPushNotification = async ({
   message,
   category,
   event,
-  senderId,
-  senderName,
+  sender,
 }: SendNotificationOptions): Promise<{
   notification: INotification;
   totalRecipients: number;
@@ -67,7 +72,7 @@ export const createAndPushNotification = async ({
     title,
     message,
     category,
-    sender: senderId,
+    sender: sender?._id,
     eventId: event?._id,
     data,
   });
@@ -81,7 +86,15 @@ export const createAndPushNotification = async ({
       ...data,
       notificationId: notification._id.toString(),
       category,
-      senderName,
+      // The mobile app reads sender.firstName / sender.lastName from the push data
+      sender: sender
+        ? {
+            firstName: sender.firstName,
+            lastName: sender.lastName,
+            avatar: sender.avatar,
+          }
+        : undefined,
+      senderName: sender ? `${sender.firstName} ${sender.lastName}` : undefined,
     },
   }));
 
@@ -99,8 +112,7 @@ export const createAndPushNotification = async ({
 /* Tells the eligible participants that a new event was created */
 export const notifyEventCreated = (
   event: IEvent,
-  senderId?: string,
-  senderName?: string
+  sender?: NotificationSender
 ): Promise<{ notification: INotification; totalRecipients: number }> => {
   const when = new Date(event.date).toLocaleDateString("en-US", {
     month: "short",
@@ -113,7 +125,6 @@ export const notifyEventCreated = (
     message: `${event.title} is scheduled on ${when}, ${event.time} - ${event.endTime}. Tap to view the details.`,
     category: "event",
     event,
-    senderId,
-    senderName,
+    sender,
   });
 };

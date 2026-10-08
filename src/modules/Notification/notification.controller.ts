@@ -90,8 +90,7 @@ export const sendEventNotification = async (
         message,
         category,
         event,
-        senderId: req.user?._id,
-        senderName: `${req.user?.firstName} ${req.user?.lastName}`,
+        sender: req.user,
       });
 
     return res.status(200).json({

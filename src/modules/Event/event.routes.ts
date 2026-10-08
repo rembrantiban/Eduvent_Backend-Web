@@ -17,10 +17,11 @@ import {
 } from './event.Controller';
 import uploadImage from '../../middleware/multer';
 import MobileAuth from '../../middleware/AuthCookieMiddleware';
+import { requireAuth } from '../../common/middleware/authmiddleware';
 
 const router = express.Router();
 
-router.post('/createEvent', uploadImage.single('image'), createEvent);
+router.post('/createEvent', requireAuth, uploadImage.single('image'), createEvent);
 router.get('/getEvents', getEvents);
 router.put('/updateEvent/:id', uploadImage.single('image'), updateEvent);
 router.put('/updateEventStatusToCanceled/:id', updateEventStatusToCanceled);
