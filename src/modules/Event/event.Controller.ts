@@ -4,6 +4,7 @@ import cloudinary from "../../config/cloudinary";
 import mongoose from "mongoose";
 import { AnyBulkWriteOperation } from "mongoose";
 import { isPastCloseTime } from "../../common/utils/attendanceWindow";
+import { notifyEventCreated } from "../Notification/notification.service";
 
 
 const parseAttendanceRules = (
@@ -244,6 +245,15 @@ export const createEvent = async (
       await savedEvent.populate(
         "locationId"
       );
+
+    /* Notify eligible participants in the background so a push failure never blocks creation */
+    notifyEventCreated(
+      savedEvent,
+      req.user?._id,
+      req.user ? `${req.user.firstName} ${req.user.lastName}` : undefined
+    ).catch((err) =>
+      console.error(err, "Error notifying event participants")
+    );
 
     return res.status(201).json({
       success: true,

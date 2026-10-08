@@ -3,9 +3,10 @@ import {
   Notification,
   NOTIFICATION_CATEGORIES,
 } from "./notification.model";
-import { User, NOT_DELETED } from "../User/user.Model";
+import { NOT_DELETED } from "../User/user.Model";
 import { Event } from "../Event/event.Model";
 import { NotificationRead } from "./notification.read.model";
+import { createAndPushNotification } from "./notification.service";
 
 export const sendEventNotification = async (
   req: Request,
@@ -83,180 +84,21 @@ export const sendEventNotification = async (
       });
     }
 
-    /* BUILD STUDENT QUERY */
-
-    let query: any = {
-
-      role: "student",
-
-      pushToken: {
-        $ne: null,
-      },
-    };
-
-    /* TARGET FILTERS */
-
-    if (
-      event &&
-      !event.isForAllStudents
-    ) {
-
-      query.$and = [];
-
-      if (
-        event.targetDepartments?.length
-      ) {
-
-        query.$and.push({
-
-          course: {
-            $in:
-              event.targetDepartments,
-          },
-        });
-      }
-
-      if (
-        event.targetYearLevels?.length
-      ) {
-
-        query.$and.push({
-
-          yearLevel: {
-            $in:
-              event.targetYearLevels,
-          },
-        });
-      }
-
-      if (
-        event.targetMajors?.length
-      ) {
-
-        query.$and.push({
-
-          major: {
-            $in:
-              event.targetMajors,
-          },
-        });
-      }
-
-      if (
-        event.targetSections?.length
-      ) {
-
-        query.$and.push({
-
-          section: {
-            $in:
-              event.targetSections,
-          },
-        });
-      }
-    }
-
-    /* FIND MATCHING STUDENTS */
-
-    const students =
-      await User.find({ ...query, ...NOT_DELETED });
-
-    /* SAVE NOTIFICATION */
-
-    const data =
-      event
-        ? {
-            screen: "EventDetails",
-            eventId: event._id.toString(),
-          }
-        : {
-            screen: "Announcements",
-          };
-
-    const notification =
-      await Notification.create({
-
+    const { notification, totalRecipients } =
+      await createAndPushNotification({
         title,
-
         message,
-
         category,
-
-        sender:
-          req.user?._id,
-
-        eventId:
-          event?._id,
-
-        data,
+        event,
+        senderId: req.user?._id,
+        senderName: `${req.user?.firstName} ${req.user?.lastName}`,
       });
-
-    /* BUILD PUSH PAYLOAD */
-
-    const messages =
-      students.map((user) => ({
-
-        to:
-          user.pushToken as string,
-
-        sound: "default",
-
-        title,
-
-        body: message,
-
-        data: {
-
-          ...data,
-
-          notificationId:
-            notification._id.toString(),
-
-          category,
-
-          senderName:
-            `${req.user?.firstName} ${req.user?.lastName}`,
-        },
-      }));
-
-    /* SEND IN CHUNKS */
-
-    for (
-      let i = 0;
-      i < messages.length;
-      i += 100
-    ) {
-
-      const chunk =
-        messages.slice(
-          i,
-          i + 100
-        );
-
-      await fetch(
-        "https://exp.host/--/api/v2/push/send",
-        {
-
-          method: "POST",
-
-          headers: {
-
-            "Content-Type":
-              "application/json",
-          },
-
-          body:
-            JSON.stringify(chunk),
-        }
-      );
-    }
 
     return res.status(200).json({
 
       success: true,
 
-      totalRecipients:
-        students.length,
+      totalRecipients,
 
       message:
         "Event notification sent successfully",
