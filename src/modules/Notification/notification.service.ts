@@ -2,6 +2,7 @@ import { QueryFilter } from "mongoose";
 import { Notification, INotification, NotificationCategory } from "./notification.model";
 import { User, IUser, NOT_DELETED } from "../User/user.Model";
 import { IEvent } from "../Event/event.Model";
+import { buildEligibleStudentFilter } from "../../common/utils/eventEligibility";
 
 const EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send";
 const PUSH_CHUNK_SIZE = 100;
@@ -15,25 +16,9 @@ export const findTargetStudents = async (
     pushToken: { $ne: null },
   };
 
-  if (event && !event.isForAllStudents) {
-    const and: QueryFilter<IUser>[] = [];
+  const eligible = event ? await buildEligibleStudentFilter(event) : {};
 
-    if (event.targetDepartments?.length)
-      and.push({ course: { $in: event.targetDepartments } });
-
-    if (event.targetYearLevels?.length)
-      and.push({ yearLevel: { $in: event.targetYearLevels } });
-
-    if (event.targetMajors?.length)
-      and.push({ major: { $in: event.targetMajors } });
-
-    if (event.targetSections?.length)
-      and.push({ section: { $in: event.targetSections } });
-
-    if (and.length) query.$and = and;
-  }
-
-  return User.find({ ...query, ...NOT_DELETED });
+  return User.find({ ...query, ...eligible, ...NOT_DELETED });
 };
 
 export interface NotificationSender {

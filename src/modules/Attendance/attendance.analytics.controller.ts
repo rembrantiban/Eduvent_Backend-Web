@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import { Attendance } from "./attendance.Model";
 import { Event, EventStatus } from "../Event/event.Model";
 import { User, NOT_DELETED } from "../User/user.Model";
+import { buildEligibleStudentFilter } from "../../common/utils/eventEligibility";
 
 
 export const getAttendanceAnalytics = async (
@@ -33,43 +34,11 @@ export const getAttendanceAnalytics = async (
           Get all students eligible for this event
         */
 
-        let eligibleUsers = [];
-
-        if (event.isForAllStudents) {
-            eligibleUsers = await User.find({
-                role: "student",
-                ...NOT_DELETED,
-            });
-        } else {
-            eligibleUsers = await User.find({
-                role: "student",
-                ...NOT_DELETED,
-
-                ...(event.targetDepartments?.length && {
-                    course: {
-                        $in: event.targetDepartments,
-                    },
-                }),
-
-                ...(event.targetMajors?.length && {
-                    major: {
-                        $in: event.targetMajors,
-                    },
-                }),
-
-                ...(event.targetYearLevels?.length && {
-                    yearLevel: {
-                        $in: event.targetYearLevels,
-                    },
-                }),
-
-                ...(event.targetSections?.length && {
-                    section: {
-                        $in: event.targetSections,
-                    },
-                }),
-            });
-        }
+        const eligibleUsers = await User.find({
+            role: "student",
+            ...NOT_DELETED,
+            ...(await buildEligibleStudentFilter(event)),
+        });
 
         /*
           STEP 2:

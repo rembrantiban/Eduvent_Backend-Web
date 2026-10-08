@@ -7,6 +7,10 @@ import { NOT_DELETED } from "../User/user.Model";
 import { Event } from "../Event/event.Model";
 import { NotificationRead } from "./notification.read.model";
 import { createAndPushNotification } from "./notification.service";
+import {
+  isStudentEligible,
+  loadCourseMajors,
+} from "../../common/utils/eventEligibility";
 
 export const sendEventNotification = async (
   req: Request,
@@ -155,6 +159,9 @@ export const getAnnouncements = async (req: Request, res: Response) => {
     /* FILTER ONLY NOTIFICATIONS
        THAT MATCH CURRENT USER */
 
+    const courseMajors =
+      await loadCourseMajors(req.user.course);
+
     const filteredNotifications =
       notifications.filter(
         (notification: any) => {
@@ -165,41 +172,10 @@ export const getAnnouncements = async (req: Request, res: Response) => {
           /* General announcements / reminders go to everyone */
           if (!event) return true;
 
-          if (
-            event.isForAllStudents
-          ) {
-            return true;
-          }
-
-          const departmentMatch =
-            !event.targetDepartments?.length ||
-            event.targetDepartments.includes(
-              req.user.course
-            );
-
-          const yearMatch =
-            !event.targetYearLevels?.length ||
-            event.targetYearLevels.includes(
-              req.user.yearLevel
-            );
-
-          const majorMatch =
-            !event.targetMajors?.length ||
-            event.targetMajors.includes(
-              req.user.major
-            );
-
-          const sectionMatch =
-            !event.targetSections?.length ||
-            event.targetSections.includes(
-              req.user.section
-            );
-
-          return (
-            departmentMatch &&
-            yearMatch &&
-            majorMatch &&
-            sectionMatch
+          return isStudentEligible(
+            event,
+            req.user,
+            courseMajors
           );
         }
       );
@@ -444,6 +420,8 @@ export const countUserUnreadNotification = async (
     const notifications = await Notification.find()
       .populate("eventId");
 
+    const courseMajors = await loadCourseMajors(req.user.course);
+
     const filteredNotifications = notifications.filter(
       (notification: any) => {
         const event = notification.eventId;
@@ -451,40 +429,7 @@ export const countUserUnreadNotification = async (
         // General announcements / reminders go to everyone
         if (!event) return true;
 
-        if (event.isForAllStudents) {
-          return true;
-        }
-
-        const departmentMatch =
-          !event.targetDepartments?.length ||
-          event.targetDepartments.includes(
-            req.user.course
-          );
-
-        const yearMatch =
-          !event.targetYearLevels?.length ||
-          event.targetYearLevels.includes(
-            req.user.yearLevel
-          );
-
-        const majorMatch =
-          !event.targetMajors?.length ||
-          event.targetMajors.includes(
-            req.user.major
-          );
-
-        const sectionMatch =
-          !event.targetSections?.length ||
-          event.targetSections.includes(
-            req.user.section
-          );
-
-        return (
-          departmentMatch &&
-          yearMatch &&
-          majorMatch &&
-          sectionMatch
-        );
+        return isStudentEligible(event, req.user, courseMajors);
       }
     );
 
