@@ -554,7 +554,6 @@ export const loginAdmin = async (req: Request, res: Response) => {
     const user = await User.findOne({
       email: email,
       role: { $in: ["admin", "CSSG_Adviser", "Saso", "CSSG_officer"] },
-      ...NOT_DELETED,
     }).select("+password");
 
     if (!user) {
@@ -569,6 +568,11 @@ export const loginAdmin = async (req: Request, res: Response) => {
 
     if (!isValidPassword) {
       return res.status(401).json({ message: "Invalid credentials." });
+    }
+
+    // Archived accounts: only revealed once the password is correct
+    if (user.isDeleted) {
+      return res.status(403).json({ message: "Your account has been disabled. Please contact admin." });
     }
 
     const token = jwt.sign(
@@ -682,7 +686,6 @@ export const loginUser = async (req: Request, res: Response) => {
         { email: normalizedIdentifier },
         { studentId: normalizedIdentifier },
       ],
-      ...NOT_DELETED,
     }).select("+password");
 
     if (user && user.isActive === false) {
@@ -702,6 +705,13 @@ export const loginUser = async (req: Request, res: Response) => {
     if (!isValidPassword) {
       return res.status(401).json({
         message: "Invalid credentials.",
+      });
+    }
+
+    // Archived accounts: only revealed once the password is correct
+    if (user.isDeleted) {
+      return res.status(403).json({
+        message: "Your account has been disabled. Please contact admin.",
       });
     }
 
