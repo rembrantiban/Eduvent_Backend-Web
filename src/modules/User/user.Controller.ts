@@ -679,14 +679,19 @@ export const loginUser = async (req: Request, res: Response) => {
         message: "Please provide identifier and password.",
       });
     }
-    const normalizedIdentifier = identifier.trim().toLowerCase();
+    const normalizedIdentifier = identifier.trim();
 
+    // Case-insensitive match: emails / student IDs are stored as typed at
+    // registration (e.g. "Juan@sfcg.edu.ph"), so an exact lowercase lookup
+    // would reject correct credentials.
     const user = await User.findOne({
       $or: [
         { email: normalizedIdentifier },
         { studentId: normalizedIdentifier },
       ],
-    }).select("+password");
+    })
+      .collation({ locale: "en", strength: 2 })
+      .select("+password");
 
     if (user && user.isActive === false) {
       return res.status(401).json({
@@ -980,15 +985,22 @@ export const requestResetCode = async (
   res: Response
 ) => {
   try {
-    const { email } = req.body;
+    const email = typeof req.body?.email === "string" ? req.body.email.trim() : "";
 
-    console.log("EMAIL:", email);
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: "Please enter your email address.",
+      });
+    }
 
-    const user = await User.findOne({ email, ...NOT_DELETED });
+    // Case-insensitive: emails are stored as typed at registration
+    const user = await User.findOne({ email, ...NOT_DELETED }).collation({ locale: "en", strength: 2 });
 
     if (!user) {
       return res.status(404).json({
-        message: "User not found",
+        success: false,
+        message: "Email not found. Please check the email address and try again.",
       });
     }
 
@@ -1013,7 +1025,7 @@ export const requestResetCode = async (
       await resend.emails.send({
         from:
           "EduVent <no-reply@eduvent.site>",
-        to: email,
+        to: user.email,
         subject: "Password Reset Code",
         html: emailTemplate(
           Number(code),
@@ -1058,7 +1070,7 @@ export const verifyResetCode = async (req: Request, res: Response) => {
       resetPasswordCode: hashedCode,
       resetPasswordExpires: { $gt: new Date() },
       ...NOT_DELETED,
-    });
+    }).collation({ locale: "en", strength: 2 });
 
     if (!user) {
       return res.status(400).json({ message: "Invalid or expired code" });
@@ -1082,7 +1094,7 @@ export const resetPassword = async (req: Request, res: Response) => {
       resetPasswordVerified: true,
       resetPasswordExpires: { $gt: new Date() },
       ...NOT_DELETED,
-    });
+    }).collation({ locale: "en", strength: 2 });
 
     if (!user) {
       return res.status(400).json({ message: "Reset not verified" });
@@ -1122,15 +1134,14 @@ export const resendResetCode = async (
     }
 
     const user = await User.findOne({
-      email,
+      email: String(email).trim(),
       ...NOT_DELETED,
-    });
+    }).collation({ locale: "en", strength: 2 });
 
     if (!user) {
       return res.status(404).json({
         success: false,
-        message:
-          "User not found",
+        message: "Email not found. Please check the email address and try again.",
       });
     }
 
@@ -1161,7 +1172,7 @@ export const resendResetCode = async (
 
     await resend.emails.send({
       from: "EduVent <no-reply@eduvent.site>",
-      to: email,
+      to: user.email,
       subject: "Your New Reset Code",
       html: emailTemplate(
         Number(code),

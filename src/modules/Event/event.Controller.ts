@@ -5,6 +5,10 @@ import mongoose from "mongoose";
 import { AnyBulkWriteOperation } from "mongoose";
 import { isPastCloseTime } from "../../common/utils/attendanceWindow";
 import { notifyEventCreated } from "../Notification/notification.service";
+import {
+  isStudentEligible,
+  loadCourseMajors,
+} from "../../common/utils/eventEligibility";
 
 
 const parseAttendanceRules = (
@@ -385,7 +389,8 @@ export const getStudentEvents = async (
 
     }
 
-    const events = await Event.find({
+    // Broad pre-filter: any target matches. The exact rule is applied below.
+    const candidates = await Event.find({
 
       ...NOT_DELETED,
 
@@ -435,6 +440,11 @@ export const getStudentEvents = async (
         status
         imageUrl
         locationId
+        isForAllStudents
+        targetDepartments
+        targetYearLevels
+        targetMajors
+        targetSections
       `)
 
       .populate({
@@ -452,6 +462,13 @@ export const getStudentEvents = async (
       })
 
       .lean();
+
+    // Only events the student is actually assigned to: every target set must match
+    const courseMajors = await loadCourseMajors(user.course);
+    const events = candidates.filter((event) =>
+      isStudentEligible(event, user, courseMajors)
+    );
+
     return res.status(200).json({
 
       success: true,
